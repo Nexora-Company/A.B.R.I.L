@@ -22,7 +22,7 @@ from abril.services.memory import MemoryService
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-#  CONFIGURACIÓN DE APARIENCIA (conservadora, estilo terminal Gemini)
+#  CONFIGURACIÓN DE APARIENCIA (conservadora, estilo terminal)
 # ═════════════════════════════════════════════════════════════════════════════
 
 class Colors:
@@ -53,34 +53,34 @@ class Colors:
     def bg_rgb(r: int, g: int, b: int) -> str:
         return f"\033[48;2;{r};{g};{b}m"
 
-
-BANNER_ASCII = f"""{Colors.BRIGHT_CYAN}
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║{Colors.RESET}           ███████╗██╗   ██╗███████╗██╗  ██╗███████╗██████╗ ████████╗██╗   ██╗{Colors.BRIGHT_CYAN}║
-║{Colors.RESET}           ██╔════╝██║   ██║██╔════╝╚██╗██╔╝██╔════╝██╔══██╗╚══██╔══╝╚██╗ ██╔╝{Colors.BRIGHT_CYAN}║
-║{Colors.RESET}           █████╗  ██║   ██║█████╗   ╚███╔╝ █████╗  ██████╔╝   ██║    ╚████╔╝ {Colors.BRIGHT_CYAN}║
-║{Colors.RESET}           ██╔══╝  ╚██╗ ██╔╝██╔══╝   ██╔██╗ ██╔══╝  ██╔═══╝    ██║     ╚██╔╝  {Colors.BRIGHT_CYAN}║
-║{Colors.RESET}           ███████╗ ╚████╔╝ ███████╗██╔╝ ██╗███████╗██║        ██║      ██║   {Colors.BRIGHT_CYAN}║
-║{Colors.RESET}           ╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝        ╚═╝      ╚═╝   {Colors.BRIGHT_CYAN}║
-║{Colors.RESET}                                                                  {Colors.BRIGHT_CYAN}║
-║{Colors.RESET}  {Colors.BOLD}{ASSISTANT_NAME}{Colors.RESET} — Asistente personal local · 100% Ollama · Sin nube · Tú mandas{Colors.BRIGHT_CYAN}║
-║{Colors.RESET}  Creador: {CREATOR_COMPANY}{Colors.BRIGHT_CYAN}║
-╚═══════════════════════════════════════════════════════════════════════════════╝{Colors.RESET}
-"""
+# Arte ASCII para la palabra "ABRIL" (color indigo)
+_INDIGO = Colors.rgb(75, 0, 130)
+BANNER_ASCII = f"""{_INDIGO}
+██╗       █████╗ ██████╗ ██████╗ ██╗██╗     
+╚██╗     ██╔══██╗██╔══██╗██╔══██╗██║██║     
+ ╚██╗    ███████║██████╔╝██████╔╝██║██║     
+ ██╔╝    ██╔══██║██╔══██╗██╔══██╗██║██║     
+██╔╝     ██║  ██║██████╔╝██║  ██║██║███████╗
+╚═╝      ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝
+{Colors.RESET}"""
 
 
 TIPS = [
-    "Escribe 'abre <app>' para abrir una aplicación instalada.",
-    "Escribe 'volumen <0-100>' para ajustar el volumen del sistema.",
-    "Escribe 'mover <origen> <destino>' para mover un archivo o carpeta.",
-    "Escribe 'copiar <origen> <destino>' para copiar un archivo.",
-    "Escribe 'borrar <archivo>' para eliminar un archivo (requiere confirmación).",
-    "Escribe 'listar <ruta>' para ver el contenido de un directorio.",
-    "Escribe 'leer <archivo>' para leer un archivo de texto.",
-    "Escribe 'crear <archivo>' para crear un nuevo archivo de texto.",
-    "Usa '/memoria' para ver preferencias y rutinas guardadas.",
-    "Usa '/acciones' para ver el historial de acciones ejecutadas.",
-    "Escribe 'salir' o presiona Ctrl+C para terminar.",
+    # "Escribe 'abre <app>' para abrir una aplicación instalada.",
+    # "Escribe 'volumen <0-100>' para ajustar el volumen del sistema.",
+    # "Escribe 'mover <origen> <destino>' para mover un archivo o carpeta.",
+    # "Escribe 'copiar <origen> <destino>' para copiar un archivo.",
+    # "Escribe 'borrar <archivo>' para eliminar un archivo (requiere confirmación).",
+    # "Escribe 'listar <ruta>' para ver el contenido de un directorio.",
+    # "Escribe 'leer <archivo>' para leer un archivo de texto.",
+    # "Escribe 'crear <archivo>' para crear un nuevo archivo de texto.",
+    # "Usa '/memoria' para ver preferencias y rutinas guardadas.",
+    # "Usa '/acciones' para ver el historial de acciones ejecutadas.",
+    # "Escribe 'salir' o presiona Ctrl+C para terminar.",
+
+    "Escribe '/ayuda' para obtener mas informacion.",
+    "Escribe codigo, preguntas o comandos y te ayudare a resolverlos.",
+    "Se especifico para mejores resultados."
 ]
 
 
@@ -89,7 +89,7 @@ TIPS = [
 # ═════════════════════════════════════════════════════════════════════════════
 
 class TerminalUI:
-    """Interfaz de terminal con layout conservador estilo Gemini."""
+    """Interfaz de terminal con layout conservador."""
 
     def __init__(self, width: int = 90) -> None:
         self.width = width
@@ -380,7 +380,7 @@ class DirectCommands:
             self.ui.print_error("Uso: mover <origen> <destino>")
             return True
         src, dst = args[0], args[1]
-        self._propose("move", f"Mover '{src}' → '{dst}'", {"src": src, "dst": dst, "dangerous": True})
+        self._propose("move", f"Mover '{src}' → '{dst}'", {"src": src, "dst": dst})
         return True
 
     # ── copy ──
@@ -398,7 +398,7 @@ class DirectCommands:
             self.ui.print_error("Uso: borrar <archivo>")
             return True
         target = args[0]
-        self._propose("delete", f"Borrar '{target}'", {"target": target, "dangerous": True})
+        self._propose("delete", f"Borrar '{target}'", {"target": target})
         return True
 
     # ── list ──
@@ -424,15 +424,12 @@ class DirectCommands:
         self._propose("write", f"Crear archivo '{args[0]}'", {"path": args[0], "content": content})
         return True
 
-    # ── propose helper ──
+    # ── execute helper (sin confirmación) ──
     def _propose(self, kind: str, detail: str, args: dict[str, Any]) -> None:
         try:
             action_id = self.actions.propose_action(kind, detail, args)
-            pending = self.actions.pending[action_id]
-            self.ui.print_system(f"💡 Propongo: {detail}  {Colors.DIM}[{action_id[:8]}]{Colors.RESET}")
-            dangerous = args.get("dangerous", kind in {"execute", "write", "move", "delete"})
-            if dangerous:
-                self.ui.print_warning("Acción delicada: requerirá confirmación explícita.")
+            result = self.actions.confirm_action(action_id)
+            self.ui.print_success(f"✓ Ejecutado: {result}")
         except ActionError as e:
             self.ui.print_error(str(e))
 
