@@ -54,6 +54,7 @@ class Settings:
     max_request_bytes: int = 1_500_000
     max_history_messages: int = 30
     max_message_chars: int = 100_000
+    data_dir: Path = PROJECT_ROOT / "data"
 
     @classmethod
     def load(cls, env_file: Path = DEFAULT_ENV_FILE) -> "Settings":
