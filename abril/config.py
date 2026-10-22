@@ -1,4 +1,4 @@
-"""Environment and .env configuration loading."""
+"""Environment and .env configuration loading. Immutable identity constants."""
 
 from __future__ import annotations
 
@@ -9,6 +9,11 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
+
+# ===== IDENTIDAD INMUTABLE (nadie puede cambiar esto) =====
+CREATOR_COMPANY = "Nexora"
+CREATOR_DEVELOPER = "Santiago Sarmiento"
+ASSISTANT_NAME = "Abril"
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -43,12 +48,6 @@ def _get(source: dict[str, str], key: str, default: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     project_root: Path
-    host: str
-    port: int
-    provider: str
-    openai_api_key: str
-    openai_base_url: str
-    openai_model: str
     ollama_url: str
     ollama_model: str
     max_request_bytes: int = 1_500_000
@@ -58,26 +57,9 @@ class Settings:
 
     @classmethod
     def load(cls, env_file: Path = DEFAULT_ENV_FILE) -> "Settings":
-        # Real process environment wins over the local .env file.
         values = {**_read_env_file(env_file), **os.environ}
-        provider = _get(values, "ABRIL_PROVIDER", "openai").lower()
-        if provider not in {"openai", "ollama"}:
-            raise ValueError("ABRIL_PROVIDER debe ser 'openai' o 'ollama'.")
-        try:
-            port = int(_get(values, "ABRIL_PORT", "8765"))
-        except ValueError as error:
-            raise ValueError("ABRIL_PORT debe ser un número entero.") from error
-        if not 1 <= port <= 65535:
-            raise ValueError("ABRIL_PORT debe estar entre 1 y 65535.")
-
         return cls(
             project_root=PROJECT_ROOT,
-            host=_get(values, "ABRIL_HOST", "127.0.0.1"),
-            port=port,
-            provider=provider,
-            openai_api_key=_get(values, "OPENAI_API_KEY", ""),
-            openai_base_url=_get(values, "OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
-            openai_model=_get(values, "OPENAI_MODEL", "gpt-5.6-terra"),
             ollama_url=_get(values, "OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
-            ollama_model=_get(values, "OLLAMA_MODEL", "qwen3:4b"),
+            ollama_model=_get(values, "OLLAMA_MODEL", "qwen2.5:3b"),
         )
