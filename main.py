@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import threading
 import time
@@ -10,9 +11,95 @@ from pathlib import Path
 
 from abril.config import Settings, CREATOR_COMPANY, CREATOR_DEVELOPER, ASSISTANT_NAME
 from abril.providers.factory import create_provider
-from abril.services.actions import ActionsService
+from abril.services.actions import ActionsService, ActionError
 from abril.services.chat import ChatService, InvalidConversation
 from abril.services.memory import MemoryService
+
+
+# Patrones para detectar intenciones de acción en lenguaje natural
+# ORDEN IMPORTANTE: los más específicos PRIMERO
+ACTION_PATTERNS = [
+    # execute: ejecutar comando (ANTES que open)
+    (re.compile(r"\b(ejecuta|ejecutar|corre|correr|lanza comando)\s+(.+)", re.I),
+     lambda m: ("execute", f"Ejecutar comando: '{m.group(2).strip()}'", {"command": m.group(2).strip()})),
+    # open: abrir app
+    (re.compile(r"\b(abre|abrir|lanza|lanzar|inicia|iniciar)\s+(.+)", re.I),
+     lambda m: ("open", f"Abrir aplicación '{m.group(2).strip()}'", {"app_query": m.group(2).strip()})),
+    # search: buscar archivos
+    (re.compile(r"\b(busca|buscar|encuentra|encontrar|localiza|localizar)\s+(.+?)\s+(?:en|dentro de)\s+(.+)", re.I),
+     lambda m: ("search", f"Buscar '{m.group(1).strip()}' en {m.group(2).strip()}", {"query": m.group(1).strip(), "root": m.group(2).strip()})),
+    (re.compile(r"\b(busca|buscar|encuentra|encontrar|localiza|localizar)\s+(.+)", re.I),
+     lambda m: ("search", f"Buscar archivos: '{m.group(2).strip()}'", {"query": m.group(2).strip()})),
+    # summarize: resumir archivo
+    (re.compile(r"\b(resume|resumir|resumen de|resumen)\s+(.+)", re.I),
+     lambda m: ("summarize", f"Resumir archivo: '{m.group(2).strip()}'", {"path_query": m.group(2).strip()})),
+    # read: leer archivo
+    (re.compile(r"\b(lee|leer|muestra|mostrar|ver)\s+(?:el\s+)?(?:archivo\s+)?(.+)", re.I),
+     lambda m: ("read", f"Leer archivo: '{m.group(2).strip()}'", {"path": m.group(2).strip()})),
+    # write: escribir archivo
+    (re.compile(r"\b(crea|crear|escribe|escribir|guarda|guardar)\s+(?:archivo\s+)?(.+?)\s+(?:con|diciendo|que diga)\s+(.+)", re.I),
+     lambda m: ("write", f"Crear archivo '{m.group(1).strip()}' con contenido", {"path": m.group(1).strip(), "content": m.group(2).strip()})),
+    # list: listar directorio
+    (re.compile(r"\b(lista|listar|muestra|mostrar)\s+(?:el\s+)?(?:directorio|carpeta|contenido de)\s+(.+)", re.I),
+     lambda m: ("list", f"Listar directorio: '{m.group(2).strip()}'", {"path": m.group(2).strip()})),
+]
+
+
+def detect_action_intent(text: str, actions: ActionsService) -> tuple[str, str, dict] | None:
+    """Detecta si el usuario quiere hacer una acción y devuelve (kind, detail, args)."""
+    text = text.strip()
+    for pattern, builder in ACTION_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            try:
+                return builder(m)
+            except Exception:
+                continue
+    return None
+
+
+def resolve_app_id(actions: ActionsService, query: str) -> str | None:
+    """Busca app_id por nombre parcial (case-insensitive)."""
+    query = query.lower()
+    # Aliases comunes en español
+    aliases = {
+        "calculadora": ["calculator", "calc"],
+        "terminal": ["terminal", "console", "konsole", "gnome-terminal"],
+        "firefox": ["firefox", "navegador"],
+        "navegador": ["firefox", "chrome", "chromium", "browser"],
+        "editor": ["gedit", "text editor", "editor"],
+        "archivos": ["files", "nautilus", "dolphin", "thunar", "file manager"],
+        "configuración": ["settings", "control center", "gnome-control-center"],
+        "captura": ["screenshot", "captura de pantalla"],
+    }
+    # Expandir query con aliases
+    search_terms = [query]
+    if query in aliases:
+        search_terms.extend(aliases[query])
+    
+    for app_id, info in actions.apps.items():
+        app_id_lower = app_id.lower()
+        name_lower = info["name"].lower()
+        for term in search_terms:
+            if term in app_id_lower or term in name_lower:
+                return app_id
+    return None
+
+
+def resolve_root(actions: ActionsService, query: str) -> str | None:
+    """Resuelve root por nombre parcial."""
+    query = query.lower()
+    for root in actions.roots:
+        if query in root.lower():
+            return root
+    # Mapeos comunes
+    aliases = {
+        "documentos": "Documentos", "docs": "Documentos", "doc": "Documentos",
+        "escritorio": "Escritorio", "desktop": "Escritorio",
+        "descargas": "Descargas", "downloads": "Descargas", "dl": "Descargas",
+        "home": "Home", "casa": "Home",
+    }
+    return aliases.get(query)
 
 
 class TerminalUI:
@@ -280,6 +367,82 @@ def main() -> int:
             actions.cancel_action(matches[0]['id'])
             ui.print_system("Acción cancelada.")
             continue
+
+        # Detectar intención de acción ANTES de enviar al modelo
+        action_intent = detect_action_intent(user_input, actions)
+        proposed_action = None
+        if action_intent:
+            kind, detail, args = action_intent
+            # Resolver referencias (app_id, root, etc.)
+            if kind == "open" and "app_query" in args:
+                app_id = resolve_app_id(actions, args["app_query"])
+                if app_id:
+                    args = {"app_id": app_id}
+                else:
+                    ui.print_warning(f"No encontré una app que coincida con '{args['app_query']}'")
+                    action_intent = None
+            elif kind == "search":
+                root = resolve_root(actions, args.get("root", "")) if args.get("root") else "Documentos"
+                args = {"root": root, "query": args.get("query", "")}
+            elif kind == "summarize" and "path_query" in args:
+                # Buscar el archivo en roots
+                found = None
+                for root_name, root_path in actions.roots.items():
+                    matches = list(root_path.rglob(f"*{args['path_query']}*"))
+                    if matches:
+                        # Tomar el primero que sea archivo válido
+                        for m in matches:
+                            if m.is_file() and m.suffix.lower() in actions.ALLOWED_SUFFIXES:
+                                try:
+                                    rel = m.relative_to(root_path)
+                                    found = {"root": root_name, "path": str(rel)}
+                                    break
+                                except ValueError:
+                                    pass
+                        if found:
+                            break
+                if found:
+                    args = found
+                else:
+                    ui.print_warning(f"No encontré archivo que coincida con '{args['path_query']}' en tus carpetas")
+                    action_intent = None
+            elif kind == "read" and "path" in args:
+                # Expandir ~ y resolver relativo a roots
+                path = Path(args["path"]).expanduser()
+                if not path.is_absolute():
+                    # Intentar en roots
+                    for root_name, root_path in actions.roots.items():
+                        candidate = root_path / path
+                        if candidate.exists():
+                            args = {"path": str(candidate)}
+                            break
+                    else:
+                        args = {"path": str(path)}
+                else:
+                    args = {"path": str(path)}
+            elif kind == "list" and "path" in args:
+                path = Path(args["path"]).expanduser()
+                if not path.is_absolute():
+                    for root_name, root_path in actions.roots.items():
+                        candidate = root_path / path
+                        if candidate.exists():
+                            args = {"path": str(candidate)}
+                            break
+                    else:
+                        args = {"path": str(path)}
+                else:
+                    args = {"path": str(path)}
+
+            if action_intent:
+                kind, detail, args = action_intent
+                try:
+                    action_id = actions.propose_action(kind, detail, args)
+                    proposed_action = actions.pending[action_id]
+                    ui.print_system(f"💡 Propongo acción: {detail}  {ui.GRAY}[{action_id[:8]}]{ui.RESET}")
+                    if kind in {"execute", "write"}:
+                        ui.print_warning("Acción peligrosa: requerirá confirmación explícita (escribe 'CONFIRMO')")
+                except ActionError as e:
+                    ui.print_error(f"No se pudo proponer la acción: {e}")
 
         # Mensaje normal al modelo
         history.append({"role": "user", "content": user_input})
