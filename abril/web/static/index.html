@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101411">
+  <title>Abril — asistente personal</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c100e;
+      --panel: #141a16;
+      --panel-2: #1b231e;
+      --line: #28332c;
+      --text: #edf3ee;
+      --muted: #8c9a90;
+      --green: #b7f080;
+      --green-2: #84bd54;
+      --danger: #ff9e91;
+      --shadow: 0 28px 80px #0008
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 52% -15%, #263a2b 0, transparent 43%), var(--bg);
+      color: var(--text);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      letter-spacing: .005em
+    }
+
+    button,
+    textarea {
+      font: inherit
+    }
+
+    button {
+      color: inherit;
+      cursor: pointer
+    }
+
+    .app {
+      width: min(1060px, 100%);
+      min-height: 100vh;
+      margin: auto;
+      padding: 24px 28px 22px;
+      display: flex;
+      flex-direction: column
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0 20px;
+      border-bottom: 1px solid #ffffff12
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid #b7f08055;
+      border-radius: 13px;
+      color: var(--green);
+      font: 600 20px Georgia, serif;
+      box-shadow: inset 0 0 18px #b7f08012
+    }
+
+    .brand-name {
+      font-size: 17px;
+      font-weight: 650;
+      letter-spacing: .03em
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+      letter-spacing: .08em;
+      text-transform: uppercase
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 9px
+    }
+    .action-btn { background:#18231a;border:1px solid #405b3d;border-radius:10px;padding:8px 12px;color:var(--green);font-size:12px }
+    .action-panel { position:fixed;inset:0;background:#000a;display:none;z-index:5;overflow:auto;padding:24px }
+    .action-panel.open { display:block }
+    .action-card { max-width:720px;margin:4vh auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow) }
+    .action-card h2 { margin:0 0 8px }.action-card p { color:var(--muted) }
+    .action-card select,.action-card input { background:#0c100e;border:1px solid var(--line);color:var(--text);padding:10px;border-radius:9px;max-width:100% }
+    .action-row { display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 20px }
+    .action-card button { background:#202b22;border:1px solid #38473b;border-radius:9px;padding:9px 12px }
+    .action-card .close-actions { float:right }
+    #actionResults,#actionLog { max-height:28vh;overflow:auto;padding-left:20px;color:#cbd6cd }
+    .result-item { margin:8px 0;overflow-wrap:anywhere }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 99px
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #e5bd70;
+      box-shadow: 0 0 10px #e5bd7070
+    }
+
+    .dot.ok {
+      background: var(--green);
+      box-shadow: 0 0 10px #b7f08080
+    }
+
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: #aab7ad
+    }
+
+    .icon-btn:hover {
+      background: var(--panel-2);
+      color: var(--text)
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0
+    }
+
+    .welcome {
+      margin: auto;
+      text-align: center;
+      max-width: 650px;
+      padding: 58px 16px 45px
+    }
+
+    .orb {
+      margin: 0 auto 23px;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 40% 38%, #334b35, #17231a 65%, #101511);
+      border: 1px solid #b7f0804d;
+      box-shadow: 0 0 55px #a6e86a16, inset 0 0 22px #b7f08012;
+      color: var(--green);
+      font: 48px Georgia, serif;
+      animation: breath 4s ease-in-out infinite
+    }
+
+    @keyframes breath {
+      50% {
+        box-shadow: 0 0 75px #a6e86a25, inset 0 0 28px #b7f08020
+      }
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(29px, 5vw, 40px);
+      font-weight: 560;
+      letter-spacing: -.04em
+    }
+
+    .intro {
+      color: var(--muted);
+      margin: 11px 0 27px;
+      font-size: 15px
+    }
+
+    .suggestions {
+      display: flex;
+      justify-content: center;
+      gap: 9px;
+      flex-wrap: wrap
+    }
+
+    .chip {
+      background: #151d17;
+      border: 1px solid #334238;
+      color: #c5d1c7;
+      border-radius: 99px;
+      padding: 9px 14px;
+      font-size: 12px;
+      transition: .2s
+    }
+
+    .chip:hover {
+      border-color: #9fd56d88;
+      color: var(--green);
+      transform: translateY(-1px)
+    }
+
+    .conversation {
+      display: none;
+      flex-direction: column;
+      gap: 23px;
+      padding: 30px 3px 26px;
+      overflow: auto;
+      max-height: calc(100vh - 260px);
+      scrollbar-color: #334139 transparent
+    }
+
+    .conversation.active {
+      display: flex
+    }
+
+    .message {
+      max-width: min(78%, 740px);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      animation: appear .22s ease-out
+    }
+
+    .message.user {
+      align-self: flex-end
+    }
+
+    .message.assistant {
+      align-self: flex-start
+    }
+
+    .speaker {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #829086;
+      padding: 0 4px
+    }
+
+    .user .speaker {
+      text-align: right
+    }
+
+    .bubble {
+      padding: 14px 17px;
+      border-radius: 17px;
+      background: #18201b;
+      border: 1px solid #29352d;
+      color: #e2eae3;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere
+    }
+
+    .user .bubble {
+      background: #263629;
+      border-color: #3b523f;
+      border-bottom-right-radius: 5px
+    }
+
+    .assistant .bubble {
+      border-bottom-left-radius: 5px
+    }
+
+    .bubble strong {
+      color: var(--green);
+      font-weight: 650
+    }
+
+    .bubble code {
+      font-family: ui-monospace, monospace;
+      background: #0d130f;
+      padding: 2px 5px;
+      border-radius: 4px
+    }
+
+    .bubble ul {
+      margin: 7px 0;
+      padding-left: 21px
+    }
+
+    .bubble p {
+      margin: 0 0 8px
+    }
+
+    .bubble p:last-child {
+      margin-bottom: 0
+    }
+
+    .message-tools {
+      display: flex;
+      gap: 7px;
+      min-height: 27px;
+      padding-left: 2px
+    }
+
+    .mini-btn {
+      border: 0;
+      background: transparent;
+      color: #758379;
+      padding: 2px 7px;
+      font-size: 11px
+    }
+
+    .mini-btn:hover {
+      color: var(--green)
+    }
+
+    .typing {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center
+    }
+
+    .typing i {
+      width: 5px;
+      height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: dot 1s infinite ease-in-out
+    }
+
+    .typing i:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .typing i:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes dot {
+      50% {
+        opacity: .25;
+        transform: translateY(-3px)
+      }
+    }
+
+    @keyframes appear {
+      from {
+        opacity: 0;
+        transform: translateY(5px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .composer-wrap {
+      position: sticky;
+      bottom: 0;
+      padding-top: 15px;
+      background: linear-gradient(transparent, var(--bg) 17%)
+    }
+
+    .composer {
+      border: 1px solid #344137;
+      background: #151c17;
+      border-radius: 20px;
+      padding: 11px 12px 10px;
+      box-shadow: var(--shadow);
+      transition: border-color .2s
+    }
+
+    .composer:focus-within {
+      border-color: #8abd6380
+    }
+
+    .attachment-row {
+      display: none;
+      gap: 7px;
+      flex-wrap: wrap;
+      padding: 0 5px 9px
+    }
+
+    .attachment-row.has-files {
+      display: flex
+    }
+
+    .file-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #36463a;
+      background: #1e2921;
+      border-radius: 99px;
+      padding: 4px 9px;
+      font-size: 11px;
+      color: #c9d7ca
+    }
+
+    .file-pill button {
+      border: 0;
+      background: none;
+      color: #8e9d91;
+      padding: 0 1px
+    }
+
+    .input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px
+    }
+
+    .composer textarea {
+      flex: 1;
+      min-height: 42px;
+      max-height: 180px;
+      resize: none;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      padding: 10px 7px;
+      line-height: 1.5
+    }
+
+    .composer textarea::placeholder {
+      color: #77857a
+    }
+
+    .tool-btn {
+      flex: none;
+      width: 39px;
+      height: 39px;
+      display: grid;
+      place-items: center;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 12px;
+      color: #99a89d;
+      transition: .18s
+    }
+
+    .tool-btn:hover {
+      background: #232e26;
+      color: var(--green)
+    }
+
+    .tool-btn.recording {
+      background: #392522;
+      color: var(--danger);
+      animation: pulse 1.2s infinite
+    }
+
+    @keyframes pulse {
+      50% {
+        box-shadow: 0 0 0 5px #ff9e9119
+      }
+    }
+
+    .send-btn {
+      background: var(--green);
+      color: #172013;
+      border: 0;
+      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      transition: .2s
+    }
+
+    .send-btn:hover {
+      background: #cbffa0;
+      transform: translateY(-1px)
+    }
+
+    .send-btn:disabled {
+      opacity: .5;
+      cursor: wait
+    }
+
+    .hint {
+      display: flex;
+      justify-content: space-between;
+      padding: 9px 6px 0;
+      color: #69776d;
+      font-size: 10px
+    }
+
+    .hint span:last-child {
+      color: #59655d
+    }
+
+    .notice {
+      margin: 11px auto 0;
+      text-align: center;
+      color: #68766d;
+      font-size: 10px
+    }
+
+    .notice b {
+      font-weight: 500;
+      color: #859389
+    }
+
+    .alert {
+      align-self: center;
+      color: var(--danger);
+      background: #291b19;
+      border: 1px solid #55352e;
+      border-radius: 12px;
+      padding: 12px 15px;
+      font-size: 13px;
+      max-width: 90%
+    }
+
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: #0009;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      z-index: 5
+    }
+
+    .modal-bg.open {
+      display: grid
+    }
+
+    .modal {
+      width: min(480px, 100%);
+      border: 1px solid var(--line);
+      background: #161d18;
+      border-radius: 18px;
+      padding: 23px;
+      box-shadow: var(--shadow)
+    }
+
+    .modal h2 {
+      margin: 0 0 12px;
+      font-size: 18px
+    }
+
+    .modal p {
+      color: #a7b3a9;
+      font-size: 13px
+    }
+
+    .modal button {
+      margin-top: 10px;
+      border: 1px solid #405044;
+      background: #202b23;
+      border-radius: 9px;
+      padding: 8px 12px
+    }
+
+    .modal .close {
+      float: right;
+      margin: 0;
+      padding: 4px 8px
+    }
+
+    @media(max-width:620px) {
+      .app {
+        padding: 15px 14px
+      }
+
+      .header-right .status {
+        max-width: 150px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis
+      }
+
+      .welcome {
+        padding: 48px 5px 35px
+      }
+
+      .suggestions {
+        gap: 7px
+      }
+
+      .chip {
+        font-size: 11px;
+        padding: 8px 11px
+      }
+
+      .message {
+        max-width: 92%
+      }
+
+      .conversation {
+        max-height: calc(100vh - 235px)
+      }
+
+      .hint {
+        font-size: 9px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">A</div>
+        <div>
+          <div class="brand-name">ABRIL</div>
+          <div class="brand-sub">Asistente personal</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="action-btn" id="actionsBtn" type="button">Acciones</button>
+        <div class="status" title="Estado del motor de IA"><span class="dot" id="statusDot"></span><span
+            id="statusText">Conectando…</span></div><button class="icon-btn" id="settingsBtn"
+          aria-label="Información y configuración" title="Información">i</button>
+      </div>
+    </header>
+    <main>
+      <section class="welcome" id="welcome">
+        <div class="orb">A</div>
+        <h1>Hola, ¿qué vamos a descubrir?</h1>
+        <p class="intro">Puedo ayudarte a pensar, resumir y encontrar patrones en lo que compartas.</p>
+        <div class="suggestions">
+          <button class="chip"
+            data-prompt="Resume las ideas principales de este texto y dime qué debería recordar.">Resumir un
+            texto</button>
+          <button class="chip"
+            data-prompt="Analiza esta información: identifica patrones, contradicciones y preguntas que debería hacerme.">Analizar
+            patrones</button>
+          <button class="chip"
+            data-prompt="Ayúdame a convertir esta idea en un plan claro con pasos concretos y prioridades.">Desarrollar
+            una idea</button>
+        </div>
+      </section>
+      <section class="conversation" id="conversation" aria-live="polite"></section>
+    </main>
+    <div class="composer-wrap">
+      <form class="composer" id="form">
+        <div class="attachment-row" id="attachmentRow"></div>
+        <div class="input-row">
+          <button class="tool-btn" type="button" id="attachBtn" aria-label="Adjuntar archivo de texto"
+            title="Adjuntar .txt, .md o .csv">＋</button>
+          <input type="file" id="fileInput"
+            accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json" multiple hidden>
+          <textarea id="prompt" rows="1" placeholder="Pregúntame algo o comparte lo que estás pensando…"
+            aria-label="Mensaje para Abril"></textarea>
+          <button class="tool-btn" type="button" id="micBtn" aria-label="Dictar mensaje"
+            title="Dictar mensaje">◉</button>
+          <button class="send-btn" id="sendBtn" type="submit" aria-label="Enviar"><svg width="17" height="17"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg></button>
+        </div>
+      </form>
+      <div class="hint"><span>Enter para enviar · Shift + Enter para nueva línea</span><span id="voiceHint">Voz
+          disponible en navegadores compatibles</span></div>
+      <div class="notice">Abril solo realiza acciones locales que seleccionas explícitamente.</div>
+    </div>
+  </div>
+  <div class="action-panel" id="actionPanel">
+    <section class="action-card">
+      <button class="close-actions" id="closeActions" type="button">Cerrar</button>
+      <h2>Acciones locales</h2><p>Abrir una app o buscar documentos por nombre en Documentos, Escritorio o Descargas. Los resúmenes se procesan con Ollama local.</p>
+      <h3>Abrir aplicación</h3><div class="action-row"><select id="appSelect" aria-label="Aplicación instalada"></select><button id="openApp" type="button">Abrir</button></div>
+      <h3>Buscar archivo</h3><div class="action-row"><select id="rootSelect" aria-label="Ubicación"></select><input id="searchQuery" maxlength="100" placeholder="Nombre del archivo"><button id="searchFiles" type="button">Buscar</button></div>
+      <ul id="actionResults"></ul><p id="actionMessage" role="status"></p>
+      <h3>Actividad reciente</h3><ul id="actionLog"></ul>
+    </section>
+  </div>
+  <div class="modal-bg" id="modalBg">
+    <div class="modal"><button class="close" id="closeModal">×</button>
+      <h2>Sobre Abril</h2>
+      <p id="providerInfo">Cargando información…</p>
+      <p>Tu conversación vive en esta pestaña y no se guarda en disco. El mensaje se envía al motor de IA configurado:
+        Ollama local o un proveedor compatible con OpenAI.</p>
+      <p>Los archivos compatibles son texto: TXT, Markdown, CSV, JSON y LOG. No adjuntes información que no quieras
+        enviar al proveedor configurado.</p><button id="clearBtn">Limpiar conversación</button>
+    </div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const prompt = $('prompt'), form = $('form'), sendBtn = $('sendBtn'), conversation = $('conversation'), welcome = $('welcome');
+    const history = []; let pendingFiles = []; let busy = false; let recognition = null;
+    const esc = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function formatText(text) {
+      let html = esc(text).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      return html.split('\n').map(line => line.startsWith('- ') ? '• ' + line.slice(2) : line).join('<br>');
+    }
+    function showConversation() { welcome.style.display = 'none'; conversation.classList.add('active'); }
+    function addMessage(role, text, waiting = false) {
+      showConversation();
+      const box = document.createElement('article'); box.className = 'message ' + role;
+      const label = role === 'user' ? 'Tú' : 'Abril';
+      box.innerHTML = `<div class="speaker">${label}</div><div class="bubble">${waiting ? '<span class="typing"><i></i><i></i><i></i></span>' : formatText(text)}</div>`;
+      if (role === 'assistant' && !waiting) { const tools = document.createElement('div'); tools.className = 'message-tools'; const speak = document.createElement('button'); speak.className = 'mini-btn'; speak.textContent = '◖ Escuchar'; speak.onclick = () => say(text); tools.appendChild(speak); box.appendChild(tools); }
+      conversation.appendChild(box); conversation.scrollTop = conversation.scrollHeight; return box;
+    }
+    function say(text) { if (!('speechSynthesis' in window)) { setAlert('Este navegador no ofrece lectura de voz.'); return; } window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'es-CO'; window.speechSynthesis.speak(u); }
+    function setAlert(text) { const a = document.createElement('div'); a.className = 'alert'; a.textContent = text; conversation.appendChild(a); showConversation(); conversation.scrollTop = conversation.scrollHeight; }
+    function resize() { prompt.style.height = 'auto'; prompt.style.height = Math.min(prompt.scrollHeight, 180) + 'px'; }
+    prompt.addEventListener('input', resize);
+    prompt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+    $('attachBtn').onclick = () => $('fileInput').click();
+    $('fileInput').addEventListener('change', async e => {
+      const files = [...e.target.files];
+      for (const file of files) { if (file.size > 500_000) { setAlert(`${file.name} supera 500 KB; no se añadió.`); continue; } try { pendingFiles.push({ name: file.name, text: await file.text() }); } catch { setAlert(`No pude leer ${file.name}.`); } }
+      renderFiles(); e.target.value = '';
+    });
+    function renderFiles() { const row = $('attachmentRow'); row.innerHTML = ''; row.classList.toggle('has-files', pendingFiles.length > 0); pendingFiles.forEach((f, i) => { const pill = document.createElement('span'); pill.className = 'file-pill'; pill.innerHTML = `${esc(f.name)} <button type="button" aria-label="Quitar ${esc(f.name)}">×</button>`; pill.querySelector('button').onclick = () => { pendingFiles.splice(i, 1); renderFiles(); }; row.appendChild(pill); }); }
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); if (busy) return;
+      let text = prompt.value.trim(); if (pendingFiles.length) { const content = pendingFiles.map(f => `\n\n--- Archivo: ${f.name} ---\n${f.text}`).join(''); text = (text || 'Analiza el contenido de los archivos adjuntos. Identifica ideas principales y patrones relevantes.') + content; }
+      if (!text) return;
+      const userText = text; history.push({ role: 'user', content: userText }); addMessage('user', userText); pendingFiles = []; renderFiles(); prompt.value = ''; resize(); busy = true; sendBtn.disabled = true;
+      const wait = addMessage('assistant', '', true);
+      try { const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: history }) }); const data = await response.json(); wait.remove(); if (!response.ok) throw new Error(data.error || 'No se pudo conectar con Abril.'); history.push({ role: 'assistant', content: data.answer }); addMessage('assistant', data.answer); }
+      catch (error) { wait.remove(); setAlert(error.message + ' Si acabas de iniciar Abril, revisa el motor configurado en la terminal.'); history.pop(); }
+      finally { busy = false; sendBtn.disabled = false; prompt.focus(); }
+    });
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) { recognition = new SpeechRecognition(); recognition.lang = 'es-CO'; recognition.interimResults = true; recognition.continuous = false; recognition.onresult = e => { let final = ''; for (let i = e.resultIndex; i < e.results.length; i++)final += e.results[i][0].transcript; prompt.value = final; resize(); }; recognition.onend = () => $('micBtn').classList.remove('recording'); recognition.onerror = e => { $('micBtn').classList.remove('recording'); setAlert(e.error === 'not-allowed' ? 'El navegador no tiene permiso para usar el micrófono.' : 'No se pudo reconocer la voz.'); }; $('micBtn').onclick = () => { try { recognition.start(); $('micBtn').classList.add('recording'); } catch { recognition.stop(); } }; }
+    else { $('micBtn').onclick = () => setAlert('Este navegador no ofrece dictado por voz. Prueba Chromium o Chrome y permite el micrófono para localhost.'); $('voiceHint').textContent = 'Dictado no compatible en este navegador'; }
+    $('settingsBtn').onclick = async () => { try { const s = await (await fetch('/api/status')).json(); $('providerInfo').textContent = `Motor: ${s.provider} · Modelo: ${s.model}. Edita la configuración en el archivo .env y reinicia Abril.`; } catch { $('providerInfo').textContent = 'No se pudo consultar la configuración del motor.'; } $('modalBg').classList.add('open'); };
+    const actionPanel = $('actionPanel');
+    async function api(path, payload) { const response = await fetch(path, { method: payload ? 'POST' : 'GET', headers: payload ? {'Content-Type':'application/json'} : {}, body: payload ? JSON.stringify(payload) : undefined }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'No se pudo completar la acción.'); return data; }
+    async function refreshAudit() { try { const {entries} = await api('/api/actions/log'); $('actionLog').innerHTML = entries.length ? entries.map(e => `<li>${esc(e.time)} · ${esc(e.action)} · ${esc(e.detail)} — ${esc(e.result)}</li>`).join('') : '<li>Sin acciones todavía.</li>'; } catch {} }
+    $('actionsBtn').onclick = async () => { actionPanel.classList.add('open'); $('actionMessage').textContent = 'Cargando…'; try { const [apps,roots] = await Promise.all([api('/api/apps'),api('/api/actions/roots')]); $('appSelect').innerHTML = apps.apps.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join(''); $('rootSelect').innerHTML = roots.roots.map(x => `<option>${esc(x)}</option>`).join(''); $('actionMessage').textContent = `${apps.apps.length} aplicaciones disponibles.`; await refreshAudit(); } catch (e) { $('actionMessage').textContent=e.message; } };
+    $('closeActions').onclick = () => actionPanel.classList.remove('open'); actionPanel.addEventListener('click', e => {if(e.target===actionPanel) actionPanel.classList.remove('open');});
+    $('openApp').onclick = async () => { try { $('actionMessage').textContent=await (await api('/api/actions/open',{app_id:$('appSelect').value})).message; await refreshAudit(); } catch(e) {$('actionMessage').textContent=e.message;} };
+    $('searchFiles').onclick = async () => { const list=$('actionResults'); list.innerHTML=''; $('actionMessage').textContent='Buscando…'; try { const {results}=await api('/api/actions/search',{root:$('rootSelect').value,query:$('searchQuery').value}); $('actionMessage').textContent=`${results.length} resultado(s).`; list.innerHTML=results.map(f=>`<li class="result-item">${esc(f.path)} <button type="button" data-path="${esc(f.path)}">Resumir</button></li>`).join('') || '<li>No se encontraron archivos compatibles.</li>'; list.querySelectorAll('button').forEach(b=>b.onclick=async()=>{ $('actionMessage').textContent='Generando resumen local… Puedes cerrar este panel para dejar de esperar.'; b.disabled=true; try { const {summary}=await api('/api/actions/summarize',{root:$('rootSelect').value,path:b.dataset.path}); $('actionMessage').textContent=summary; await refreshAudit(); } catch(e) {$('actionMessage').textContent=e.message;} finally {b.disabled=false;} }); await refreshAudit(); } catch(e) {$('actionMessage').textContent=e.message;} };
+    $('closeModal').onclick = () => $('modalBg').classList.remove('open'); $('modalBg').addEventListener('click', e => { if (e.target === $('modalBg')) $('modalBg').classList.remove('open'); });
+    $('clearBtn').onclick = () => { history.length = 0; conversation.innerHTML = ''; conversation.classList.remove('active'); welcome.style.display = 'block'; window.speechSynthesis?.cancel(); $('modalBg').classList.remove('open'); };
+    document.querySelectorAll('.chip').forEach(chip => chip.onclick = () => { prompt.value = chip.dataset.prompt; resize(); prompt.focus(); });
+    fetch('/api/status').then(r => r.json()).then(s => { if (s.ready) { $('statusText').textContent = `${s.provider} · ${s.model}`; $('statusDot').classList.add('ok'); } else { $('statusText').textContent = s.status_message || 'Motor no disponible'; $('statusDot').classList.remove('ok'); } }).catch(() => { $('statusText').textContent = 'Sin servidor'; });
+  </script>
+</body>
+
+</html>
