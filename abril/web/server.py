@@ -6,8 +6,9 @@ from http.server import ThreadingHTTPServer
 
 from ..config import Settings
 from ..providers.factory import create_provider
-from ..services.chat import ChatService
 from ..services.actions import ActionsService
+from ..services.chat import ChatService
+from ..services.memory import MemoryService
 from .handler import AbrilRequestHandler
 
 
@@ -15,6 +16,7 @@ def serve(settings: Settings) -> None:
     provider = create_provider(settings)
     service = ChatService(provider, settings)
     actions = ActionsService(settings, service)
+    memory = MemoryService(settings, actions)
     handler = type(
         "ConfiguredAbrilRequestHandler",
         (AbrilRequestHandler,),
@@ -23,6 +25,7 @@ def serve(settings: Settings) -> None:
             "static_dir": settings.project_root / "abril" / "web" / "static",
             "max_request_bytes": settings.max_request_bytes,
             "actions_service": actions,
+            "memory_service": memory,
         },
     )
     server = ThreadingHTTPServer((settings.host, settings.port), handler)
