@@ -36,6 +36,9 @@ Thumbs.db
 *.log
 logs/
 
+# Datos locales (audit_log.json, memory.json)
+data/
+
 # Build (si se usa pyinstaller, cx_Freeze, etc.)
 dist/
 build/

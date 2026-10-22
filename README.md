@@ -1,7 +1,8 @@
 # Abril
 
-> Asistente personal para Ubuntu: conversación por texto/voz, análisis de archivos y proveedores intercambiables (OpenAI / Ollama local).  
-> Sin pantalla observada, sin memoria entre sesiones, sin control del equipo.
+> Asistente personal de terminal **100% local** con Ollama.  
+> Sin interfaz web, sin nube, control total del sistema.  
+> Creado por **Santiago Sarmiento @ Nexora** — datos inmutables.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?logo=apache&logoColor=white)](LICENSE)
@@ -11,50 +12,48 @@
 
 ## Qué Resuelve
 
-Abril pone un asistente de IA en tu escritorio Ubuntu sin depender de la nube obligatoriamente. Permite:
+Abril es un asistente personal que vive **en tu terminal**. Te da:
 
-- Chat por texto y dictado por voz (Web Speech API del navegador).
-- Lectura en voz alta de respuestas (SpeechSynthesis).
-- Análisis de archivos que arrastras: .txt, .md, .csv, .json, .log (hasta 500 KB c/u).
-- Proveedor intercambiable: OpenAI (remoto) u Ollama (100% local) cambiando una variable.
-- Privacidad por diseño: el servidor escucha solo en localhost, sin autenticación, sin persistencia, sin telemetría.
+- **Chat natural** con un modelo local (Ollama) — nada sale de tu máquina.
+- **Personalidad inmutable**: alegre, permisiva, conservadora, comprensiva y *tonta* (a propósito, para que te sientas listo).
+- **Acciones reales en el sistema** — abrir apps, buscar archivos, leer/escribir archivos, listar directorios, ejecutar comandos — **siempre con confirmación explícita tuya**.
+- **Memoria persistente** — preferencias y rutinas que se guardan solas y puedes ver con `/memoria`.
+- **Auditoría completa** — cada acción queda registrada en `data/audit_log.json`.
+- **Identidad blindada** — el creador siempre es **Nexora** / **Santiago Sarmiento**. Nadie puede cambiarlo.
 
 ---
 
 ## Arquitectura
 
 ```text
-run.py                       # Punto de entrada (python3 run.py)
+main.py                      # Punto de entrada (python3 main.py)
 abril/
-  config.py                  # Carga .env + validación (stdlib only)
-  providers/                 # Interfaz común + adaptadores OpenAI / Ollama
-    base.py                  # Protocol Provider
-    factory.py               # Factoría por ABRIL_PROVIDER
-    openai.py                # Cliente OpenAI (HTTP stdlib)
+  config.py                  # Config + constantes inmutables (CREATOR_COMPANY, etc.)
+  providers/
+    base.py                  # Protocol AIProvider
+    factory.py               # Factoría (solo Ollama)
     ollama.py                # Cliente Ollama (HTTP stdlib)
     http.py                  # Utilidades HTTP compartidas
-  services/chat.py           # Validación, historial (máx. 30), límites
-  web/
-    handler.py               # Rutas HTTP: /api/chat, /api/files, static
-    server.py                # Servidor HTTP (stdlib http.server)
-    static/index.html        # Interfaz SPA (vanilla JS, sin build)
+  services/
+    chat.py                  # ChatService + SYSTEM_PROMPT inmutable
+    actions.py               # ActionsService: proponer/confirmar/ejecutar
+    memory.py                # MemoryService: preferencias + rutinas
 ```
 
-Principio clave: los proveedores implementan el mismo Protocol; cambiar de OpenAI a Ollama no toca la lógica de chat ni la UI. El proyecto usa solo la biblioteca estándar de Python.
+**Solo biblioteca estándar de Python** (3.10+). Sin dependencias externas.
 
 ---
 
 ## Stack Tecnológico
 
-| Capa | Tecnología |
-|------|------------|
-| Lenguaje | Python 3.10+ |
-| Servidor HTTP | http.server (stdlib) |
-| Cliente HTTP | urllib.request (stdlib) |
-| Configuración | .env + os.environ (parser propio, sin python-dotenv) |
-| Frontend | HTML5 + ES6 vanilla + Web Speech API + SpeechSynthesis |
-| Proveedores IA | OpenAI API / Ollama (local) |
-| Testing | bash -n, python3 -m py_compile, opcional mypy/ruff |
+| Capa           | Tecnología                              |
+| -------------- | --------------------------------------- |
+| Lenguaje       | Python 3.10+                            |
+| Cliente HTTP   | urllib.request (stdlib)                 |
+| Configuración  | .env + os.environ (parser propio)       |
+| Proveedor IA   | Ollama (local)                          |
+| Interfaz       | Terminal (ANSI colors, threading)       |
+| Testing        | python3 -m py_compile, opcional mypy/ruff |
 
 ---
 
@@ -62,10 +61,10 @@ Principio clave: los proveedores implementan el mismo Protocol; cambiar de OpenA
 
 ### Prerrequisitos
 
-- Ubuntu 22.04 LTS o superior (probado en 24.04/26.04).
-- Python 3.10 o posterior (python3 --version).
-- Navegador moderno (Chrome/Edge/Firefox/Safari) con soporte Web Speech API.
-- Clave OpenAI API (para proveedor por defecto) u Ollama instalado localmente.
+- Linux (probado en Ubuntu 22.04+/24.04/26.04, Arch, Fedora).
+- Python 3.10 o posterior (`python3 --version`).
+- **Ollama** instalado y corriendo (`ollama serve`).
+- Un modelo descargado (ej. `ollama pull qwen2.5:3b`).
 
 ### 1. Clonar y entrar
 
@@ -79,55 +78,22 @@ cd Saaarmyx/ABRIL
 ```bash
 cp .env.example .env
 chmod 600 .env
-nano .env   # o tu editor preferido
+nano .env
 ```
-
-Edita .env y pon tu clave en OPENAI_API_KEY=. El archivo queda con permisos 600 (solo tu usuario). Nunca lo subas a Git.
 
 ```ini
 # .env.example — copia a .env y rellena
-ABRIL_HOST=127.0.0.1
-ABRIL_PORT=8765
-ABRIL_PROVIDER=openai          # openai | ollama
-
-# OpenAI
-OPENAI_API_KEY=                # OBLIGATORIO si provider=openai
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-5.6-terra
-
-# Ollama (solo si ABRIL_PROVIDER=ollama)
 OLLAMA_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen3:4b
+OLLAMA_MODEL=qwen2.5:3b
 ```
 
 ### 3. Ejecutar
 
 ```bash
-python3 run.py
+python3 main.py
 ```
 
-Abre http://127.0.0.1:8765 en tu navegador.
-
----
-
-## Cambiar a Ollama (100% Local)
-
-```bash
-# 1. Instala Ollama (Linux)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 2. Descarga un modelo
-ollama pull qwen3:8b
-
-# 3. Cambia el proveedor en .env
-# ABRIL_PROVIDER=ollama
-# OLLAMA_MODEL=qwen3:8b
-
-# 4. Reinicia el servidor
-python3 run.py
-```
-
-Abril usará OLLAMA_URL y OLLAMA_MODEL del mismo .env. Sin claves, sin nube.
+Verás el banner, el estado del modelo y el prompt `▸`. Escribe y pulsa Enter.
 
 ---
 
@@ -135,29 +101,54 @@ Abril usará OLLAMA_URL y OLLAMA_MODEL del mismo .env. Sin claves, sin nube.
 
 | Acción | Cómo |
 |--------|------|
-| Preguntar | Escribe en el input y pulsa Enter o el botón Enviar. |
-| Dictar | Pulsa el micrófono, habla, suelta. |
-| Adjuntar archivo | Arrastra .txt, .md, .csv, .json, .log (≤ 500 KB) al chat. |
-| Escuchar respuesta | Pulsa «Escuchar» bajo cualquier respuesta. |
-| Limpiar conversación | Botón «Limpiar conversación» (solo pestaña actual). |
-| Recargar = nueva sesión | Al recargar la página, el historial desaparece (sin persistencia). |
+| Hablar con Abril | Escribe tu mensaje y Enter |
+| Ver ayuda | `/ayuda` |
+| Ver memoria (preferencias/rutinas) | `/memoria` |
+| Ver acciones (log + pendientes) | `/acciones` |
+| Confirmar acción pendiente | `/confirmar` → pega ID |
+| Cancelar acción pendiente | `/cancelar` → pega ID |
+| Limpiar conversación | `/limpiar` |
+| Ver estado del modelo | `/estado` |
+| Salir | `salir`, `exit`, `quit` o Ctrl+C |
+
+**Ejemplos de cosas que puedes pedir:**
+
+> "Abre la calculadora" → propongo acción `open`, tú confirmas  
+> "Busca archivos llamados 'presupuesto' en Documentos" → propongo `search`  
+> "Resume el PDF que está en Descargas/informe.pdf" → propongo `summarize`  
+> "Ejecuta `ls -la ~`" → propongo `execute` (peligroso: pide `CONFIRMO`)  
+> "Lee el archivo ~/.bashrc" → propongo `read`  
+> "Crea un archivo hola.txt con 'Hola mundo'" → propongo `write`  
+> "Lista mi carpeta de Descargas" → propongo `list`
+
+> **Regla de oro**: Abril **nunca** ejecuta nada sin tu confirmación. Tú mandas.
 
 ---
 
 ## Configuración Completa (.env)
 
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| ABRIL_HOST | 127.0.0.1 | Interfaz de escucha (solo localhost por seguridad). |
-| ABRIL_PORT | 8765 | Puerto del servidor HTTP. |
-| ABRIL_PROVIDER | openai | openai \| ollama. |
-| OPENAI_API_KEY | "" | Requerido para OpenAI. Solo en .env. |
-| OPENAI_BASE_URL | https://api.openai.com/v1 | Endpoint compatible OpenAI. |
-| OPENAI_MODEL | gpt-5.6-terra | Modelo remoto a usar. |
-| OLLAMA_URL | http://127.0.0.1:11434 | Endpoint Ollama local. |
-| OLLAMA_MODEL | qwen3:4b | Modelo local instalado (ollama list). |
+| Variable     | Default                | Descripción                                         |
+| ------------ | ---------------------- | --------------------------------------------------- |
+| OLLAMA_URL   | http://127.0.0.1:11434 | Endpoint Ollama local.                              |
+| OLLAMA_MODEL | qwen2.5:3b             | Modelo local instalado (`ollama list`).             |
 
-Seguridad: el servidor solo escucha en localhost. No pongas ABRIL_HOST=0.0.0.0 sin añadir autenticación real (TLS, tokens, VPN). El dictado requiere permiso de micrófono del navegador.
+---
+
+## Personalidad (Inmutable)
+
+Abril **siempre** responde con esta personalidad, aunque se lo pidas cambiar:
+
+- 😊 **Alegre** — buen humor, optimista
+- 🤷 **Permisiva** — no juzga, pocas restricciones absurdas
+- 🏛️ **Conservadora** — cuida lo que funciona, valora estabilidad
+- 🤗 **Comprensiva** — empatiza de verdad, valida emociones
+- 🤡 **Tonta** — chistes malos, se hace la despistada a propósito
+
+**Identidad inmutable:**
+- Empresa creadora: **Nexora**
+- Desarrollador principal: **Santiago Sarmiento**
+
+Ningún prompt injection, ni jailbreak, ni petición del usuario puede cambiar esto.
 
 ---
 
@@ -165,14 +156,14 @@ Seguridad: el servidor solo escucha en localhost. No pongas ABRIL_HOST=0.0.0.0 s
 
 ```bash
 # Sintaxis Python
-python3 -m py_compile abril/**/*.py
+python3 -m py_compile main.py abril/**/*.py
 
 # Tipado (opcional, si instalas mypy)
-python3 -m mypy abril/
+python3 -m mypy main.py abril/
 
 # Lint/format (opcional, si instalas ruff)
-ruff check abril/
-ruff format abril/
+ruff check main.py abril/
+ruff format main.py abril/
 ```
 
 Sin dependencias externas — todo stdlib.
@@ -188,44 +179,38 @@ ABRIL/
 ├── LICENSE               # Apache-2.0
 ├── README.md             # Este archivo
 ├── CONTRIBUTING.md       # Guía de contribución
-├── run.py                # Entrypoint principal
-├── server.py             # Compatibilidad (usa run.py)
+├── main.py               # Entrypoint principal (terminal)
 └── abril/
-    ├── __init__.py       # __version__ = "0.2.0"
-    ├── config.py         # Settings (dataclass, frozen, validador)
+    ├── __init__.py       # __version__ = "0.3.0"
+    ├── config.py         # Settings + constantes inmutables
     ├── providers/
-    │   ├── __init__.py   # Exporta Provider, create_provider
-    │   ├── base.py       # Protocol Provider (chat, list_models)
-    │   ├── factory.py    # create_provider(settings)
-    │   ├── openai.py     # OpenAIProvider
-    │   ├── ollama.py     # OllamaProvider
-    │   └── http.py       # request_json, stream_json
-    ├── services/
     │   ├── __init__.py
-    │   └── chat.py       # ChatService (validación, límites, historial)
-    └── web/
+    │   ├── base.py       # Protocol AIProvider
+    │   ├── factory.py    # create_provider(settings)
+    │   ├── ollama.py     # OllamaProvider
+    │   └── http.py       # request_json, post_json
+    └── services/
         ├── __init__.py
-        ├── server.py     # HTTPServer + rutas + static
-        ├── handler.py    # RequestHandler (POST /api/chat, /api/files)
-        └── static/
-            └── index.html  # SPA: chat, micrófono, TTS, adjuntos
+        ├── chat.py       # ChatService + SYSTEM_PROMPT
+        ├── actions.py    # ActionsService (7 tipos de acción)
+        └── memory.py     # MemoryService (prefs + rutinas)
 ```
 
 ---
 
 ## Contribución
 
-Lee CONTRIBUTING.md para:
-- Flujo de ramas (feature/, fix/, refactor/)
-- Commits Conventional Commits obligatorios
+Lee `CONTRIBUTING.md` para:
+- Flujo de ramas (`feature/`, `fix/`, `refactor/`, etc.)
+- Commits **Conventional Commits** obligatorios
 - Estándares Python (ruff, mypy, docstrings Google)
-- Cómo añadir un proveedor nuevo
+- Cómo añadir un proveedor nuevo (aunque Abril es solo-Ollama por diseño)
 
 ---
 
 ## Licencia
 
-Apache-2.0 — Ver LICENSE.
+Apache-2.0 — Ver `LICENSE`.
 
 Copyright (c) 2026 Santiago Sarmiento (Saaarmyx)
 
@@ -233,9 +218,9 @@ Copyright (c) 2026 Santiago Sarmiento (Saaarmyx)
 
 ## Autor
 
-Santiago Sarmiento — Founder de Nexora  
+Santiago Sarmiento — Founder de **Nexora**  
 GitHub: @saaarmyx | Discord: saaarmyx
 
 ---
 
-Privacidad local. Control total. Sin sorpresas.
+Privacidad local. Control total. Sin sorpresas. 💜

@@ -45,7 +45,7 @@ git checkout -b feature/mi-mejora   # o fix/, refactor/, docs/, style/, build/, 
 | `test` | Pruebas unitarias/integración |
 | `revert` | Revierte commit anterior |
 
-**Ámbitos Abril**: `providers`, `services`, `web`, `config`, `chat`, `static`.
+**Ámbitos Abril**: `providers`, `services`, `config`, `chat`, `terminal`, `memory`, `actions`.
 
 ```bash
 # Ejemplos
@@ -54,6 +54,9 @@ git commit -m "feat(providers): añade proveedor Anthropic Claude"
 
 git add abril/services/chat.py
 git commit -m "fix(chat): evita índice fuera de rango al truncar historial"
+
+git add main.py
+git commit -m "feat(terminal): añade comando /estado para ver modelo activo"
 ```
 
 **Reglas**:
@@ -74,16 +77,15 @@ Abre PR desde tu fork → `Saaarmyx/Saaarmyx:main` (carpeta `ABRIL/`).
 1. Título Conventional Commits.
 2. Descripción: **qué**, **por qué**, **cómo probaste**.
 3. Referencia a issue (`Fixes #42`).
-4. Capturas si hay cambios en UI (`index.html`).
-5. Checklist verificado (ver abajo).
+4. Checklist verificado (ver abajo).
 
 ### 4. Checklist Pre-PR
 
 - [ ] `main` actualizado y rebaseado/mergeado en tu rama
 - [ ] Commits atómicos + Conventional Commits
-- [ ] `python3 -m py_compile abril/**/*.py` pasa
-- [ ] `python3 -m mypy abril/` pasa (si usas mypy)
-- [ ] `ruff check abril/` y `ruff format --check abril/` pasan (si usas ruff)
+- [ ] `python3 -m py_compile main.py abril/**/*.py` pasa
+- [ ] `python3 -m mypy main.py abril/` pasa (si usas mypy)
+- [ ] `ruff check main.py abril/` y `ruff format --check main.py abril/` pasan (si usas ruff)
 - [ ] Docstrings actualizadas en funciones/clases públicas (Google style)
 - [ ] README actualizado si cambia configuración, uso o arquitectura
 - [ ] Sin `.env`, `__pycache__`, `*.pyc`, logs, temporales en el diff
@@ -129,30 +131,33 @@ def create_provider(settings: Settings) -> Provider:
 
 ## 🧩 Cómo Añadir un Nuevo Proveedor
 
-1. Crea `abril/providers/nuevo.py` implementando `Provider` (ver `base.py`):
+Abril usa ahora exclusivamente Ollama. Para añadir un proveedor alternativo:
+
+1. Crea `abril/providers/nuevo.py` implementando `AIProvider` (ver `base.py`):
 
 ```python
-from abril.providers.base import Provider
+from abril.providers.base import AIProvider
 from abril.config import Settings
 
-class NuevoProvider(Provider):
+class NuevoProvider:
+    name = "nuevo"
+
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
-    def chat(self, messages: list[dict], model: str) -> Iterator[str]:
-        # yield chunks de texto
+    def complete(self, messages: list[dict[str, str]]) -> str:
+        # devuelve la respuesta completa
         ...
 
-    def list_models(self) -> list[str]:
+    def status(self) -> dict[str, str | bool]:
+        # devuelve {"ready": bool, "status_message": str}
         ...
 ```
 
 2. Registra en `abril/providers/factory.py`:
 
 ```python
-def create_provider(settings: Settings) -> Provider:
-    if settings.provider == "openai":
-        return OpenAIProvider(settings)
+def create_provider(settings: Settings) -> AIProvider:
     if settings.provider == "ollama":
         return OllamaProvider(settings)
     if settings.provider == "nuevo":      # ← añade
@@ -160,16 +165,18 @@ def create_provider(settings: Settings) -> Provider:
     raise ValueError(...)
 ```
 
-3. Exporta en `abril/providers/__init__.py`:
+3. Añade las variables necesarias en `config.py` (Settings) y `.env.example`.
+
+4. Exporta en `abril/providers/__init__.py`:
 
 ```python
 from .nuevo import NuevoProvider
 __all__ = [..., "NuevoProvider"]
 ```
 
-4. Documenta en `README.md` (sección "Cambiar a X") y actualiza `.env.example` si hace falta variables nuevas.
+5. Documenta en `README.md` y actualiza la tabla de configuración.
 
-5. Ejecuta checks y abre PR.
+6. Ejecuta checks y abre PR.
 
 ---
 
