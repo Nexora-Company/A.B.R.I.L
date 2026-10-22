@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
@@ -165,6 +166,7 @@ class TerminalUI:
   {Colors.BRIGHT_GREEN}/cancelar{Colors.RESET}    — Cancelar acción pendiente
   {Colors.BRIGHT_GREEN}/limpiar{Colors.RESET}     — Limpiar conversación
   {Colors.BRIGHT_GREEN}/estado{Colors.RESET}      — Estado del motor
+  {Colors.BRIGHT_GREEN}/historial{Colors.RESET}   — Ver mensajes del historial cargado
 
 {Colors.DIM}Todo lo demás se envía al modelo local para responder.{Colors.RESET}
 """)
@@ -282,6 +284,39 @@ def resolve_app_id(actions: ActionsService, query: str) -> str | None:
             if term in app_id_lower or term in name_lower:
                 return app_id
     return None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  HISTORIAL DE CONVERSACIÓN PERSISTENTE (Fase A)
+# ═════════════════════════════════════════════════════════════════════════════
+
+CHAT_HISTORY_FILE = "chat_history.json"
+MAX_HISTORY_MESSAGES = 100  # máximo de mensajes a guardar en disco
+
+
+def load_chat_history(data_dir: Path) -> list[dict[str, str]]:
+    """Carga el historial de conversación desde disco."""
+    path = data_dir / CHAT_HISTORY_FILE
+    try:
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data[-MAX_HISTORY_MESSAGES:]
+    except (OSError, json.JSONDecodeError):
+        pass
+    return []
+
+
+def save_chat_history(data_dir: Path, history: list[dict[str, str]]) -> None:
+    """Persiste el historial de conversación en disco."""
+    path = data_dir / CHAT_HISTORY_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(
+        json.dumps(history[-MAX_HISTORY_MESSAGES:], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp.replace(path)
 
 
 class DirectCommands:
@@ -457,6 +492,9 @@ def main() -> int:
     memory = MemoryService(settings, actions)
     direct = DirectCommands(ui, actions)
 
+    # Fase A: cargar historial persistente
+    history: list[dict[str, str]] = load_chat_history(settings.data_dir)
+
     st = provider.status()
     ui.print_status_bar(provider.name, provider.model, st.get("ready", False))
     if not st.get("ready"):
@@ -464,7 +502,8 @@ def main() -> int:
         ui.print_system(f"Ejecuta: ollama pull {settings.ollama_model}")
         ui.print_system("Y asegúrate de que 'ollama serve' esté corriendo.\n")
 
-    history: list[dict[str, str]] = []
+    if history:
+        ui.print_system(f"Historial cargado: {len(history)} mensaje(s) recuperado(s) de la sesión anterior.")
 
     while True:
         try:
@@ -478,12 +517,13 @@ def main() -> int:
 
         # Comandos de salida
         if user_input.lower() in {"salir", "exit", "quit", "q"}:
-            print(f"{Colors.GRAY}Chao.{Colors.RESET}")
+            save_chat_history(settings.data_dir, history)
+            print(f"{Colors.GRAY}Chao. Historial guardado.{Colors.RESET}")
             return 0
 
         # Comandos directos (sin IA)
         if direct.handle(user_input):
-            # Mostrar acciones pendientes después de proponer
+            # Mostrar acciones pendientes después de ejecutar
             ui.print_pending(actions.list_pending())
             continue
 
@@ -497,6 +537,13 @@ def main() -> int:
                 continue
             if user_input == "/acciones":
                 ui.print_actions(actions.audit_log(), actions.list_pending())
+                continue
+            if user_input == "/historial":
+                ui.print_system(f"Mensajes en historial: {len(history)}")
+                if history:
+                    for i, m in enumerate(history[-10:], 1):
+                        role = "Tú" if m["role"] == "user" else ASSISTANT_NAME
+                        print(f"  {i}. {role}: {m['content'][:80]}")
                 continue
             if user_input == "/confirmar":
                 pending = actions.list_pending()
@@ -549,7 +596,8 @@ def main() -> int:
                 continue
             if user_input == "/limpiar":
                 history.clear()
-                ui.print_system("Conversación limpiada.")
+                save_chat_history(settings.data_dir, history)
+                ui.print_system("Conversación limpiada y historial guardado.")
                 continue
             if user_input == "/estado":
                 st = provider.status()
@@ -569,6 +617,8 @@ def main() -> int:
             ui.print_assistant(answer)
             ui.add_message("assistant", answer)
             history.append({"role": "assistant", "content": answer})
+            # Fase A: guardar historial después de cada intercambio
+            save_chat_history(settings.data_dir, history)
         except InvalidConversation as e:
             ui.stop_typing()
             ui.print_error(str(e))
