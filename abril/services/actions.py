@@ -39,6 +39,10 @@ class ActionsService:
         "read": "Leer archivo de texto",
         "write": "Escribir/crear archivo",
         "list": "Listar directorio",
+        "volume": "Ajustar volumen del sistema",
+        "move": "Mover archivo/carpeta",
+        "copy": "Copiar archivo/carpeta",
+        "delete": "Eliminar archivo",
     }
 
     def __init__(self, settings: Settings, chat: ChatService) -> None:
@@ -403,3 +407,126 @@ class ActionsService:
         if len(output) > 5000:
             output = output[:5000] + "\n... (truncado)"
         return output if output.strip() else f"(exit code: {result.returncode})"
+
+    def _execute_volume(self, args: dict[str, Any]) -> str:
+        level = args.get("level")
+        if not isinstance(level, int) or not 0 <= level <= 100:
+            raise ActionError("Nivel de volumen inválido (0-100).")
+        # Probamos pactl (PipeWire/PulseAudio) primero, luego amixer (ALSA)
+        for cmd in (["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{level}%"], ["amixer", "set", "Master", f"{level}%"]):
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
+                if result.returncode == 0:
+                    return f"Volumen ajustado al {level}%."
+            except FileNotFoundError:
+                continue
+            except OSError:
+                continue
+        raise ActionError("No se pudo ajustar el volumen (instala pulseaudio, pipewire o alsa-utils).")
+
+    def _execute_move(self, args: dict[str, Any]) -> str:
+        src = args.get("src")
+        dst = args.get("dst")
+        if not isinstance(src, str) or not isinstance(dst, str):
+            raise ActionError("Origen y destino requeridos.")
+        src_path = Path(src).expanduser().resolve()
+        dst_path = Path(dst).expanduser().resolve()
+        if not src_path.exists():
+            raise ActionError(f"El origen '{src}' no existe.")
+        # Seguridad: ambos dentro de roots o home
+        allowed = False
+        for root in self.roots.values():
+            try:
+                src_path.relative_to(root)
+                dst_path.relative_to(root)
+                allowed = True
+                break
+            except ValueError:
+                pass
+        if not allowed:
+            try:
+                src_path.relative_to(Path.home())
+                dst_path.relative_to(Path.home())
+                allowed = True
+            except ValueError:
+                pass
+        if not allowed:
+            raise ActionError("Ruta fuera del alcance permitido.")
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            src_path.rename(dst_path)
+        except OSError as e:
+            raise ActionError(f"No se pudo mover: {e}")
+        return f"Movido '{src}' → '{dst}'."
+
+    def _execute_copy(self, args: dict[str, Any]) -> str:
+        src = args.get("src")
+        dst = args.get("dst")
+        if not isinstance(src, str) or not isinstance(dst, str):
+            raise ActionError("Origen y destino requeridos.")
+        src_path = Path(src).expanduser().resolve()
+        dst_path = Path(dst).expanduser().resolve()
+        if not src_path.exists():
+            raise ActionError(f"El origen '{src}' no existe.")
+        allowed = False
+        for root in self.roots.values():
+            try:
+                src_path.relative_to(root)
+                dst_path.relative_to(root)
+                allowed = True
+                break
+            except ValueError:
+                pass
+        if not allowed:
+            try:
+                src_path.relative_to(Path.home())
+                dst_path.relative_to(Path.home())
+                allowed = True
+            except ValueError:
+                pass
+        if not allowed:
+            raise ActionError("Ruta fuera del alcance permitido.")
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if src_path.is_dir():
+                import shutil
+                shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+            else:
+                import shutil
+                shutil.copy2(src_path, dst_path)
+        except OSError as e:
+            raise ActionError(f"No se pudo copiar: {e}")
+        return f"Copiado '{src}' → '{dst}'."
+
+    def _execute_delete(self, args: dict[str, Any]) -> str:
+        target = args.get("target")
+        if not isinstance(target, str):
+            raise ActionError("Objetivo requerido.")
+        path = Path(target).expanduser().resolve()
+        if not path.exists():
+            raise ActionError(f"El archivo '{target}' no existe.")
+        allowed = False
+        for root in self.roots.values():
+            try:
+                path.relative_to(root)
+                allowed = True
+                break
+            except ValueError:
+                pass
+        if not allowed:
+            try:
+                path.relative_to(Path.home())
+                allowed = True
+            except ValueError:
+                pass
+        if not allowed:
+            raise ActionError("Ruta fuera del alcance permitido.")
+        try:
+            if path.is_dir():
+                import shutil
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        except OSError as e:
+            raise ActionError(f"No se pudo borrar: {e}")
+        return f"Borrado '{target}'."

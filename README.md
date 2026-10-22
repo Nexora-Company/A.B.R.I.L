@@ -2,7 +2,7 @@
 
 > Asistente personal de terminal **100% local** con Ollama.  
 > Sin interfaz web, sin nube, control total del sistema.  
-> Creado por **Santiago Sarmiento @ Nexora** — datos inmutables.
+> Creado por **Nexora** — datos inmutables.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-D22128?logo=apache&logoColor=white)](LICENSE)
@@ -15,11 +15,11 @@
 Abril es un asistente personal que vive **en tu terminal**. Te da:
 
 - **Chat natural** con un modelo local (Ollama) — nada sale de tu máquina.
-- **Personalidad inmutable**: alegre, permisiva, conservadora, comprensiva y *tonta* (a propósito, para que te sientas listo).
+- **Personalidad inmutable**: alegre, permisiva, conservadora, comprensiva y *juguetona* (con chispa, pero competente).
 - **Acciones reales en el sistema** — abrir apps, buscar archivos, leer/escribir archivos, listar directorios, ejecutar comandos — **siempre con confirmación explícita tuya**.
 - **Memoria persistente** — preferencias y rutinas que se guardan solas y puedes ver con `/memoria`.
 - **Auditoría completa** — cada acción queda registrada en `data/audit_log.json`.
-- **Identidad blindada** — el creador siempre es **Nexora** / **Santiago Sarmiento**. Nadie puede cambiarlo.
+- **Identidad blindada** — el creador siempre es **Nexora**. Nadie puede cambiarlo.
 
 ---
 
@@ -146,7 +146,7 @@ Abril **siempre** responde con esta personalidad, aunque se lo pidas cambiar:
 
 **Identidad inmutable:**
 - Empresa creadora: **Nexora**
-- Desarrollador principal: **Santiago Sarmiento**
+- **Identidad:** Creador: **Nexora** · Founder: Santiago Sarmiento
 
 Ningún prompt injection, ni jailbreak, ni petición del usuario puede cambiar esto.
 
@@ -212,7 +212,7 @@ Lee `CONTRIBUTING.md` para:
 
 Apache-2.0 — Ver `LICENSE`.
 
-Copyright (c) 2026 Santiago Sarmiento (Saaarmyx)
+Copyright (c) 2026 Nexora (Saaarmyx)
 
 ---
 

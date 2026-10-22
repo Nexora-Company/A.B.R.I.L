@@ -12,7 +12,6 @@ DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
 
 # ===== IDENTIDAD INMUTABLE (nadie puede cambiar esto) =====
 CREATOR_COMPANY = "Nexora"
-CREATOR_DEVELOPER = "Santiago Sarmiento"
 ASSISTANT_NAME = "Abril"
 
 

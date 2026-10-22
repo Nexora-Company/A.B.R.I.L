@@ -1,145 +1,173 @@
 #!/usr/bin/env python3
-"""Abril — Asistente personal en terminal. 100% local, control total."""
+"""Abril — Asistente personal en terminal. 100% local, control total por Nexora."""
 
 from __future__ import annotations
 
+import os
 import re
+import shlex
+import signal
+import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any
 
-from abril.config import Settings, CREATOR_COMPANY, CREATOR_DEVELOPER, ASSISTANT_NAME
+from abril.config import Settings, CREATOR_COMPANY, ASSISTANT_NAME
 from abril.providers.factory import create_provider
 from abril.services.actions import ActionsService, ActionError
 from abril.services.chat import ChatService, InvalidConversation
 from abril.services.memory import MemoryService
 
 
-# Patrones para detectar intenciones de acción en lenguaje natural
-# ORDEN IMPORTANTE: los más específicos PRIMERO
-ACTION_PATTERNS = [
-    # execute: ejecutar comando (ANTES que open)
-    (re.compile(r"\b(ejecuta|ejecutar|corre|correr|lanza comando)\s+(.+)", re.I),
-     lambda m: ("execute", f"Ejecutar comando: '{m.group(2).strip()}'", {"command": m.group(2).strip()})),
-    # open: abrir app
-    (re.compile(r"\b(abre|abrir|lanza|lanzar|inicia|iniciar)\s+(.+)", re.I),
-     lambda m: ("open", f"Abrir aplicación '{m.group(2).strip()}'", {"app_query": m.group(2).strip()})),
-    # search: buscar archivos
-    (re.compile(r"\b(busca|buscar|encuentra|encontrar|localiza|localizar)\s+(.+?)\s+(?:en|dentro de)\s+(.+)", re.I),
-     lambda m: ("search", f"Buscar '{m.group(1).strip()}' en {m.group(2).strip()}", {"query": m.group(1).strip(), "root": m.group(2).strip()})),
-    (re.compile(r"\b(busca|buscar|encuentra|encontrar|localiza|localizar)\s+(.+)", re.I),
-     lambda m: ("search", f"Buscar archivos: '{m.group(2).strip()}'", {"query": m.group(2).strip()})),
-    # summarize: resumir archivo
-    (re.compile(r"\b(resume|resumir|resumen de|resumen)\s+(.+)", re.I),
-     lambda m: ("summarize", f"Resumir archivo: '{m.group(2).strip()}'", {"path_query": m.group(2).strip()})),
-    # read: leer archivo
-    (re.compile(r"\b(lee|leer|muestra|mostrar|ver)\s+(?:el\s+)?(?:archivo\s+)?(.+)", re.I),
-     lambda m: ("read", f"Leer archivo: '{m.group(2).strip()}'", {"path": m.group(2).strip()})),
-    # write: escribir archivo
-    (re.compile(r"\b(crea|crear|escribe|escribir|guarda|guardar)\s+(?:archivo\s+)?(.+?)\s+(?:con|diciendo|que diga)\s+(.+)", re.I),
-     lambda m: ("write", f"Crear archivo '{m.group(1).strip()}' con contenido", {"path": m.group(1).strip(), "content": m.group(2).strip()})),
-    # list: listar directorio
-    (re.compile(r"\b(lista|listar|muestra|mostrar)\s+(?:el\s+)?(?:directorio|carpeta|contenido de)\s+(.+)", re.I),
-     lambda m: ("list", f"Listar directorio: '{m.group(2).strip()}'", {"path": m.group(2).strip()})),
-]
+# ═════════════════════════════════════════════════════════════════════════════
+#  CONFIGURACIÓN DE APARIENCIA (conservadora, estilo terminal Gemini)
+# ═════════════════════════════════════════════════════════════════════════════
 
-
-def detect_action_intent(text: str, actions: ActionsService) -> tuple[str, str, dict] | None:
-    """Detecta si el usuario quiere hacer una acción y devuelve (kind, detail, args)."""
-    text = text.strip()
-    for pattern, builder in ACTION_PATTERNS:
-        m = pattern.search(text)
-        if m:
-            try:
-                return builder(m)
-            except Exception:
-                continue
-    return None
-
-
-def resolve_app_id(actions: ActionsService, query: str) -> str | None:
-    """Busca app_id por nombre parcial (case-insensitive)."""
-    query = query.lower()
-    # Aliases comunes en español
-    aliases = {
-        "calculadora": ["calculator", "calc"],
-        "terminal": ["terminal", "console", "konsole", "gnome-terminal"],
-        "firefox": ["firefox", "navegador"],
-        "navegador": ["firefox", "chrome", "chromium", "browser"],
-        "editor": ["gedit", "text editor", "editor"],
-        "archivos": ["files", "nautilus", "dolphin", "thunar", "file manager"],
-        "configuración": ["settings", "control center", "gnome-control-center"],
-        "captura": ["screenshot", "captura de pantalla"],
-    }
-    # Expandir query con aliases
-    search_terms = [query]
-    if query in aliases:
-        search_terms.extend(aliases[query])
-    
-    for app_id, info in actions.apps.items():
-        app_id_lower = app_id.lower()
-        name_lower = info["name"].lower()
-        for term in search_terms:
-            if term in app_id_lower or term in name_lower:
-                return app_id
-    return None
-
-
-def resolve_root(actions: ActionsService, query: str) -> str | None:
-    """Resuelve root por nombre parcial."""
-    query = query.lower()
-    for root in actions.roots:
-        if query in root.lower():
-            return root
-    # Mapeos comunes
-    aliases = {
-        "documentos": "Documentos", "docs": "Documentos", "doc": "Documentos",
-        "escritorio": "Escritorio", "desktop": "Escritorio",
-        "descargas": "Descargas", "downloads": "Descargas", "dl": "Descargas",
-        "home": "Home", "casa": "Home",
-    }
-    return aliases.get(query)
-
-
-class TerminalUI:
-    """Interfaz de terminal con colores y animaciones sutiles."""
-
+class Colors:
     RESET = "\033[0m"
     BOLD = "\033[1m"
     DIM = "\033[2m"
-    GREEN = "\033[38;5;113m"
-    YELLOW = "\033[38;5;221m"
-    CYAN = "\033[38;5;117m"
-    MAGENTA = "\033[38;5;177m"
-    RED = "\033[38;5;204m"
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
     GRAY = "\033[38;5;244m"
-    BLUE = "\033[38;5;75m"
+    BRIGHT_BLACK = "\033[38;5;238m"
+    BRIGHT_WHITE = "\033[38;5;252m"
+    BRIGHT_CYAN = "\033[38;5;87m"
+    BRIGHT_MAGENTA = "\033[38;5;171m"
+    BRIGHT_YELLOW = "\033[38;5;226m"
+    BRIGHT_GREEN = "\033[38;5;154m"
 
-    def __init__(self) -> None:
+    @staticmethod
+    def rgb(r: int, g: int, b: int) -> str:
+        return f"\033[38;2;{r};{g};{b}m"
+
+    @staticmethod
+    def bg_rgb(r: int, g: int, b: int) -> str:
+        return f"\033[48;2;{r};{g};{b}m"
+
+
+BANNER_ASCII = f"""{Colors.BRIGHT_CYAN}
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║{Colors.RESET}           ███████╗██╗   ██╗███████╗██╗  ██╗███████╗██████╗ ████████╗██╗   ██╗{Colors.BRIGHT_CYAN}║
+║{Colors.RESET}           ██╔════╝██║   ██║██╔════╝╚██╗██╔╝██╔════╝██╔══██╗╚══██╔══╝╚██╗ ██╔╝{Colors.BRIGHT_CYAN}║
+║{Colors.RESET}           █████╗  ██║   ██║█████╗   ╚███╔╝ █████╗  ██████╔╝   ██║    ╚████╔╝ {Colors.BRIGHT_CYAN}║
+║{Colors.RESET}           ██╔══╝  ╚██╗ ██╔╝██╔══╝   ██╔██╗ ██╔══╝  ██╔═══╝    ██║     ╚██╔╝  {Colors.BRIGHT_CYAN}║
+║{Colors.RESET}           ███████╗ ╚████╔╝ ███████╗██╔╝ ██╗███████╗██║        ██║      ██║   {Colors.BRIGHT_CYAN}║
+║{Colors.RESET}           ╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝        ╚═╝      ╚═╝   {Colors.BRIGHT_CYAN}║
+║{Colors.RESET}                                                                  {Colors.BRIGHT_CYAN}║
+║{Colors.RESET}  {Colors.BOLD}{ASSISTANT_NAME}{Colors.RESET} — Asistente personal local · 100% Ollama · Sin nube · Tú mandas{Colors.BRIGHT_CYAN}║
+║{Colors.RESET}  Creador: {CREATOR_COMPANY}{Colors.BRIGHT_CYAN}║
+╚═══════════════════════════════════════════════════════════════════════════════╝{Colors.RESET}
+"""
+
+
+TIPS = [
+    "Escribe 'abre <app>' para abrir una aplicación instalada.",
+    "Escribe 'volumen <0-100>' para ajustar el volumen del sistema.",
+    "Escribe 'mover <origen> <destino>' para mover un archivo o carpeta.",
+    "Escribe 'copiar <origen> <destino>' para copiar un archivo.",
+    "Escribe 'borrar <archivo>' para eliminar un archivo (requiere confirmación).",
+    "Escribe 'listar <ruta>' para ver el contenido de un directorio.",
+    "Escribe 'leer <archivo>' para leer un archivo de texto.",
+    "Escribe 'crear <archivo>' para crear un nuevo archivo de texto.",
+    "Usa '/memoria' para ver preferencias y rutinas guardadas.",
+    "Usa '/acciones' para ver el historial de acciones ejecutadas.",
+    "Escribe 'salir' o presiona Ctrl+C para terminar.",
+]
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  UI DE TERMINAL
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TerminalUI:
+    """Interfaz de terminal con layout conservador estilo Gemini."""
+
+    def __init__(self, width: int = 90) -> None:
+        self.width = width
         self._typing = False
         self._typing_thread: threading.Thread | None = None
+        self.messages: list[tuple[str, str]] = []  # (role, text)
+
+    def clear(self) -> None:
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
 
     def print_banner(self) -> None:
+        print(BANNER_ASCII)
+        print(f"  {Colors.GRAY}Tips para empezar:{Colors.RESET}")
+        for tip in TIPS[:3]:
+            print(f"  {Colors.DIM}•{Colors.RESET} {tip}")
+        print()
+
+    def print_status_bar(self, provider_name: str, model: str, ready: bool) -> None:
+        status_text = f"{Colors.GREEN}● Listo{Colors.RESET}" if ready else f"{Colors.RED}● No disponible{Colors.RESET}"
+        line = (
+            f"{Colors.DIM}Motor:{Colors.RESET} {provider_name}  │  "
+            f"{Colors.DIM}Modelo:{Colors.RESET} {model}  │  "
+            f"{Colors.DIM}Estado:{Colors.RESET} {status_text}"
+        )
+        print(f"{Colors.BRIGHT_BLACK}─" * self.width + f"{Colors.RESET}")
+        print(line)
+        print(f"{Colors.BRIGHT_BLACK}─" * self.width + f"{Colors.RESET}")
+
+    def print_messages(self) -> None:
+        if not self.messages:
+            print(f"  {Colors.DIM}Sin conversación todavía. Escribe algo para empezar.{Colors.RESET}")
+            return
+        for role, text in self.messages[-12:]:
+            if role == "user":
+                print(f"{Colors.BRIGHT_CYAN}> {text}{Colors.RESET}")
+            else:
+                print(f"{Colors.BRIGHT_MAGENTA}{ASSISTANT_NAME}{Colors.RESET} {text}")
+        print()
+
+    def print_input_prompt(self) -> str:
+        return f"{Colors.BRIGHT_GREEN}>{Colors.RESET} "
+
+    def print_system(self, text: str) -> None:
+        print(f"{Colors.GRAY}[sistema] {text}{Colors.RESET}")
+
+    def print_warning(self, text: str) -> None:
+        print(f"{Colors.YELLOW}[aviso] {text}{Colors.RESET}")
+
+    def print_error(self, text: str) -> None:
+        print(f"{Colors.RED}[error] {text}{Colors.RESET}")
+
+    def print_success(self, text: str) -> None:
+        print(f"{Colors.GREEN}[ok] {text}{Colors.RESET}")
+
+    def print_help(self) -> None:
         print(f"""
-{self.CYAN}╔══════════════════════════════════════════════════════════╗
-║  {self.MAGENTA}{ASSISTANT_NAME}{self.CYAN}  —  Asistente personal local                   ║
-║  {self.GRAY}Creado por {CREATOR_DEVELOPER} @ {CREATOR_COMPANY}{self.CYAN}              ║
-║  {self.GREEN}100% local · Ollama · Sin nube · Tú mandas{self.CYAN}          ║
-╚══════════════════════════════════════════════════════════╝{self.RESET}
+{Colors.BRIGHT_CYAN}Comandos directos (sin IA):{Colors.RESET}
+  {Colors.BRIGHT_GREEN}abre <app>{Colors.RESET}         — Abre una aplicación instalada
+  {Colors.BRIGHT_GREEN}volumen <0-100>{Colors.RESET}    — Ajusta el volumen del sistema
+  {Colors.BRIGHT_GREEN}mover <origen> <destino>{Colors.RESET} — Mueve archivo/carpeta
+  {Colors.BRIGHT_GREEN}copiar <origen> <destino>{Colors.RESET}  — Copia archivo/carpeta
+  {Colors.BRIGHT_GREEN}borrar <archivo>{Colors.RESET}     — Elimina un archivo
+  {Colors.BRIGHT_GREEN}listar <ruta>{Colors.RESET}        — Lista contenido de directorio
+  {Colors.BRIGHT_GREEN}leer <archivo>{Colors.RESET}       — Lee un archivo de texto
+  {Colors.BRIGHT_GREEN}crear <archivo>{Colors.RESET}      — Crea un archivo de texto
+
+{Colors.BRIGHT_CYAN}Comandos del sistema:{Colors.RESET}
+  {Colors.BRIGHT_GREEN}/ayuda{Colors.RESET}       — Muestra esta ayuda
+  {Colors.BRIGHT_GREEN}/memoria{Colors.RESET}     — Ver preferencias y rutinas
+  {Colors.BRIGHT_GREEN}/acciones{Colors.RESET}    — Ver historial de acciones
+  {Colors.BRIGHT_GREEN}/confirmar{Colors.RESET}   — Confirmar acción pendiente
+  {Colors.BRIGHT_GREEN}/cancelar{Colors.RESET}    — Cancelar acción pendiente
+  {Colors.BRIGHT_GREEN}/limpiar{Colors.RESET}     — Limpiar conversación
+  {Colors.BRIGHT_GREEN}/estado{Colors.RESET}      — Estado del motor
+
+{Colors.DIM}Todo lo demás se envía al modelo local para responder.{Colors.RESET}
 """)
-
-    def print_status(self, provider_name: str, model: str, ready: bool) -> None:
-        status = f"{self.GREEN}● Listo{self.RESET}" if ready else f"{self.RED}● {model} no disponible{self.RESET}"
-        print(f"  {self.BLUE}Motor:{self.RESET} {provider_name}  |  {self.BLUE}Modelo:{self.RESET} {model}  |  {status}")
-        print(f"  {self.GRAY}Escribe 'salir', 'exit' o Ctrl+C para terminar.{self.RESET}")
-        print(f"  {self.GRAY}Comandos: /memoria, /acciones, /ayuda{self.RESET}\n")
-
-    def print_user_prompt(self) -> str:
-        return f"{self.YELLOW}▸{self.RESET} "
-
-    def print_assistant_prefix(self) -> str:
-        return f"{self.MAGENTA}{ASSISTANT_NAME}{self.RESET} {self.GRAY}›{self.RESET} "
 
     def start_typing(self) -> None:
         self._typing = True
@@ -157,122 +185,285 @@ class TerminalUI:
         dots = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         i = 0
         while self._typing:
-            sys.stdout.write(f"\r{self.MAGENTA}{dots[i % len(dots)]}{self.RESET}  ")
+            sys.stdout.write(f"\r{Colors.BRIGHT_MAGENTA}{dots[i % len(dots)]}{Colors.RESET}  ")
             sys.stdout.flush()
             time.sleep(0.08)
             i += 1
 
     def print_assistant(self, text: str) -> None:
         self.stop_typing()
-        prefix = self.print_assistant_prefix()
-        print(f"{prefix}{text}")
+        print(f"{Colors.BRIGHT_MAGENTA}{ASSISTANT_NAME}{Colors.RESET} {text}")
 
-    def print_system(self, text: str) -> None:
-        print(f"{self.GRAY}[sistema] {text}{self.RESET}")
-
-    def print_error(self, text: str) -> None:
-        print(f"{self.RED}[error] {text}{self.RESET}")
-
-    def print_warning(self, text: str) -> None:
-        print(f"{self.YELLOW}[aviso] {text}{self.RESET}")
-
-    def print_help(self) -> None:
-        print(f"""
-{self.CYAN}Comandos disponibles:{self.RESET}
-  {self.YELLOW}/ayuda{self.RESET}       — Muestra esta ayuda
-  {self.YELLOW}/memoria{self.RESET}     — Ver preferencias y rutinas guardadas
-  {self.YELLOW}/acciones{self.RESET}    — Ver log de acciones y pendientes
-  {self.YELLOW}/confirmar{self.RESET}   — Confirmar una acción pendiente
-  {self.YELLOW}/cancelar{self.RESET}    — Cancelar una acción pendiente
-  {self.YELLOW}/limpiar{self.RESET}     — Limpiar conversación actual
-  {self.YELLOW}/estado{self.RESET}      — Estado del motor y modelo
-  {self.YELLOW}salir / exit{self.RESET}   — Salir de Abril
-
-{self.GRAY}Acciones soportadas (se proponen, tú confirmas):
-  📱 open       — Abrir app instalada
-  🔍 search     — Buscar archivos
-  📄 summarize  — Resumir archivo/PDF
-  ⚡ execute    — Ejecutar comando en terminal
-  📖 read       — Leer archivo de texto
-  ✍️ write      — Crear/escribir archivo
-  📁 list       — Listar directorio
-
-Todo lo demás se envía al modelo. Yo propongo, tú confirmas.{self.RESET}
-""")
+    def add_message(self, role: str, text: str) -> None:
+        self.messages.append((role, text))
 
     def print_memory(self, prefs: dict, routines: list) -> None:
-        print(f"\n{self.CYAN}═══ MEMORIA ═══{self.RESET}")
+        print(f"\n{Colors.BRIGHT_CYAN}═══ MEMORIA ═══{Colors.RESET}")
         if prefs:
-            print(f"  {self.BLUE}Preferencias:{self.RESET}")
+            print(f"  {Colors.BLUE}Preferencias:{Colors.RESET}")
             for k, v in prefs.items():
-                print(f"    {self.GREEN}•{self.RESET} {k} = {v}")
+                print(f"    {Colors.GREEN}•{Colors.RESET} {k} = {v}")
         else:
-            print(f"  {self.GRAY}Sin preferencias guardadas.{self.RESET}")
-
+            print(f"  {Colors.DIM}Sin preferencias guardadas.{Colors.RESET}")
         if routines:
-            print(f"  {self.BLUE}Rutinas:{self.RESET}")
+            print(f"  {Colors.BLUE}Rutinas:{Colors.RESET}")
             for r in routines:
-                estado = f"{self.GREEN}confirmada{self.RESET}" if r.get("confirmed") else f"{self.YELLOW}pendiente{self.RESET}"
-                print(f"    {self.GREEN}•{self.RESET} {r['name']} — {r.get('description', '')} [{estado}]")
+                estado = f"{Colors.GREEN}confirmada{Colors.RESET}" if r.get("confirmed") else f"{Colors.YELLOW}pendiente{Colors.RESET}"
+                print(f"    {Colors.GREEN}•{Colors.RESET} {r['name']} — {r.get('description', '')} [{estado}]")
         else:
-            print(f"  {self.GRAY}Sin rutinas guardadas.{self.RESET}")
+            print(f"  {Colors.DIM}Sin rutinas guardadas.{Colors.RESET}")
         print()
 
     def print_actions(self, log: list, pending: list) -> None:
-        print(f"\n{self.CYAN}═══ ACCIONES ═══{self.RESET}")
-        self.print_pending_actions(pending)
-
-        if log:
-            print(f"  {self.BLUE}Historial reciente:{self.RESET}")
-            for entry in log[:15]:
-                print(f"    {self.GRAY}{entry['time']}{self.RESET} {entry['action']} — {entry['result']}")
+        print(f"\n{Colors.BRIGHT_CYAN}═══ ACCIONES ═══{Colors.RESET}")
+        if pending:
+            print(f"  {Colors.BLUE}Pendientes:{Colors.RESET}")
+            for p in pending:
+                print(f"    {Colors.YELLOW}⏳{Colors.RESET} [{p['id'][:8]}] {p['detail']}")
         else:
-            print(f"  {self.GRAY}Sin historial de acciones.{self.RESET}")
+            print(f"  {Colors.DIM}Sin acciones pendientes.{Colors.RESET}")
+        if log:
+            print(f"  {Colors.BLUE}Historial:{Colors.RESET}")
+            for entry in log[-10:]:
+                print(f"    {Colors.GRAY}{entry['time']}{Colors.RESET} {entry['action']} — {entry['result']}")
+        else:
+            print(f"  {Colors.DIM}Sin historial.{Colors.RESET}")
         print()
 
-    def confirm_action(self, detail: str, kind: str = "", dangerous: bool = False) -> bool:
-        prefix = f"{self.RED}⚠ PELIGROSO{self.RESET} " if dangerous else ""
-        print(f"{self.YELLOW}¿Confirmas?{self.RESET} {prefix}{detail}")
+    def confirm_action(self, detail: str, dangerous: bool = False) -> bool:
+        prefix = f"{Colors.RED}⚠ PELIGROSO{Colors.RESET} " if dangerous else ""
+        print(f"{Colors.YELLOW}¿Confirmar?{Colors.RESET} {prefix}{detail}")
         if dangerous:
-            print(f"  {self.RED}Esta acción puede modificar el sistema. Escribe 'CONFIRMO' para proceder.{self.RESET}")
-            resp = input(f"  {self.CYAN}[CONFIRMO/cancelar]{self.RESET} ").strip()
+            print(f"  {Colors.RED}Escribe 'CONFIRMO' para proceder.{Colors.RESET}")
+            resp = input(f"  {Colors.CYAN}[CONFIRMO/cancelar]{Colors.RESET} ").strip()
             return resp == "CONFIRMO"
-        resp = input(f"  {self.CYAN}[s/N]{self.RESET} ").strip().lower()
+        resp = input(f"  {Colors.CYAN}[s/N]{Colors.RESET} ").strip().lower()
         return resp in {"s", "si", "sí", "y", "yes"}
 
-    def print_pending_actions(self, pending: list) -> None:
+    def print_pending(self, pending: list) -> None:
         if not pending:
-            print(f"  {self.GRAY}Sin acciones pendientes.{self.RESET}")
+            print(f"  {Colors.DIM}Sin acciones pendientes.{Colors.RESET}")
             return
-        print(f"  {self.BLUE}Pendientes de confirmación:{self.RESET}")
+        print(f"  {Colors.BLUE}Pendientes:{Colors.RESET}")
         for p in pending:
-            kind_label = p.get('kind', '')
-            icon = {"open": "📱", "search": "🔍", "summarize": "📄", "execute": "⚡", "read": "📖", "write": "✍️", "list": "📁"}.get(kind_label, "⏳")
-            print(f"    {self.YELLOW}{icon}{self.RESET} [{p['id'][:8]}] {p['detail']} {self.GRAY}({kind_label}){self.RESET}")
+            icon = {"open": "📱", "search": "🔍", "summarize": "📄", "execute": "⚡", "read": "📖", "write": "✍️", "list": "📁", "move": "📦", "copy": "📋", "delete": "🗑️", "volume": "🔊"}.get(p.get("kind", ""), "⏳")
+            print(f"    {Colors.YELLOW}{icon}{Colors.RESET} [{p['id'][:8]}] {p['detail']} {Colors.DIM}({p.get('kind','')}){Colors.RESET}")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  COMANDOS DIRECTOS (sin IA)
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Aliases comunes de aplicaciones (español → términos de búsqueda)
+APP_ALIASES = {
+    "calculadora": ["calculator", "calc"],
+    "calculator": ["calculator", "calc"],
+    "terminal": ["terminal", "console", "konsole", "gnome-terminal"],
+    "firefox": ["firefox", "navegador"],
+    "navegador": ["firefox", "chrome", "chromium", "browser"],
+    "editor": ["gedit", "text editor", "editor"],
+    "archivos": ["files", "nautilus", "dolphin", "thunar", "file manager"],
+    "configuración": ["settings", "control center", "gnome-control-center"],
+    "ajustes": ["settings", "control center", "gnome-control-center"],
+    "captura": ["screenshot", "captura de pantalla"],
+}
+
+
+def resolve_app_id(actions: ActionsService, query: str) -> str | None:
+    """Busca app_id por nombre parcial usando aliases."""
+    query = query.lower()
+    search_terms = [query]
+    if query in APP_ALIASES:
+        search_terms.extend(APP_ALIASES[query])
+    for app_id, info in actions.apps.items():
+        app_id_lower = app_id.lower()
+        name_lower = info["name"].lower()
+        for term in search_terms:
+            if term in app_id_lower or term in name_lower:
+                return app_id
+    return None
+
+
+class DirectCommands:
+    """Comandos directos que se ejecutan sin pasar por la IA."""
+
+    def __init__(self, ui: TerminalUI, actions: ActionsService) -> None:
+        self.ui = ui
+        self.actions = actions
+
+    def handle(self, user_input: str) -> bool:
+        """Devuelve True si el comando fue manejado directamente."""
+        text = user_input.strip()
+        if not text:
+            return False
+
+        parts = shlex.split(text)
+        if not parts:
+            return False
+        cmd = parts[0].lower()
+
+        if cmd == "abre":
+            return self._cmd_open(parts[1:])
+        if cmd == "volumen":
+            return self._cmd_volume(parts[1:])
+        if cmd == "mover":
+            return self._cmd_move(parts[1:])
+        if cmd == "copiar":
+            return self._cmd_copy(parts[1:])
+        if cmd == "borrar":
+            return self._cmd_delete(parts[1:])
+        if cmd == "listar":
+            return self._cmd_list(parts[1:])
+        if cmd == "leer":
+            return self._cmd_read(parts[1:])
+        if cmd == "crear":
+            return self._cmd_create(parts[1:])
+        return False
+
+    # ── open ──
+    def _cmd_open(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: abre <nombre de aplicación>")
+            return True
+        query = " ".join(args)
+        # Búsqueda directa primero
+        matches = []
+        q_lower = query.lower()
+        for app_id, info in self.actions.apps.items():
+            if q_lower in app_id.lower() or q_lower in info["name"].lower():
+                matches.append((app_id, info["name"]))
+        # Si no hay coincidencia directa, usar aliases
+        if not matches:
+            app_id = resolve_app_id(self.actions, query)
+            if app_id:
+                matches = [(app_id, self.actions.apps[app_id]["name"])]
+        if not matches:
+            self.ui.print_warning(f"No encontré apps que coincidan con '{query}'")
+            return True
+        if len(matches) == 1:
+            app_id, name = matches[0]
+            self._propose("open", f"Abrir aplicación '{name}'", {"app_id": app_id})
+        else:
+            self.ui.print_system(f"Se encontraron {len(matches)} apps:")
+            for i, (app_id, name) in enumerate(matches[:10], 1):
+                print(f"  {i}. {name} ({app_id})")
+            sel = input(f"  {Colors.CYAN}Selecciona número (1-{len(matches)}):{Colors.RESET} ").strip()
+            try:
+                idx = int(sel) - 1
+                if 0 <= idx < len(matches):
+                    app_id, name = matches[idx]
+                    self._propose("open", f"Abrir aplicación '{name}'", {"app_id": app_id})
+                else:
+                    self.ui.print_error("Selección inválida.")
+            except ValueError:
+                self.ui.print_error("Entrada inválida.")
+        return True
+
+    # ── volume ──
+    def _cmd_volume(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: volumen <0-100>")
+            return True
+        try:
+            level = int(args[0])
+            if not 0 <= level <= 100:
+                raise ValueError
+        except ValueError:
+            self.ui.print_error("El volumen debe ser un número entre 0 y 100.")
+            return True
+        self._propose("volume", f"Ajustar volumen al {level}%", {"level": level})
+        return True
+
+    # ── move ──
+    def _cmd_move(self, args: list[str]) -> bool:
+        if len(args) < 2:
+            self.ui.print_error("Uso: mover <origen> <destino>")
+            return True
+        src, dst = args[0], args[1]
+        self._propose("move", f"Mover '{src}' → '{dst}'", {"src": src, "dst": dst, "dangerous": True})
+        return True
+
+    # ── copy ──
+    def _cmd_copy(self, args: list[str]) -> bool:
+        if len(args) < 2:
+            self.ui.print_error("Uso: copiar <origen> <destino>")
+            return True
+        src, dst = args[0], args[1]
+        self._propose("copy", f"Copiar '{src}' → '{dst}'", {"src": src, "dst": dst})
+        return True
+
+    # ── delete ──
+    def _cmd_delete(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: borrar <archivo>")
+            return True
+        target = args[0]
+        self._propose("delete", f"Borrar '{target}'", {"target": target, "dangerous": True})
+        return True
+
+    # ── list ──
+    def _cmd_list(self, args: list[str]) -> bool:
+        path = args[0] if args else "."
+        self._propose("list", f"Listar directorio '{path}'", {"path": path})
+        return True
+
+    # ── read ──
+    def _cmd_read(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: leer <archivo>")
+            return True
+        self._propose("read", f"Leer archivo '{args[0]}'", {"path": args[0]})
+        return True
+
+    # ── create ──
+    def _cmd_create(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: crear <archivo>")
+            return True
+        content = input(f"  {Colors.CYAN}Contenido del archivo:{Colors.RESET} ").strip()
+        self._propose("write", f"Crear archivo '{args[0]}'", {"path": args[0], "content": content})
+        return True
+
+    # ── propose helper ──
+    def _propose(self, kind: str, detail: str, args: dict[str, Any]) -> None:
+        try:
+            action_id = self.actions.propose_action(kind, detail, args)
+            pending = self.actions.pending[action_id]
+            self.ui.print_system(f"💡 Propongo: {detail}  {Colors.DIM}[{action_id[:8]}]{Colors.RESET}")
+            dangerous = args.get("dangerous", kind in {"execute", "write", "move", "delete"})
+            if dangerous:
+                self.ui.print_warning("Acción delicada: requerirá confirmación explícita.")
+        except ActionError as e:
+            self.ui.print_error(str(e))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  APLICACIÓN PRINCIPAL
+# ═════════════════════════════════════════════════════════════════════════════
 
 
 def main() -> int:
     try:
         settings = Settings.load()
     except Exception as e:
-        print(f"\033[31m[error] Configuración inválida: {e}\033[0m")
+        print(f"{Colors.RED}[error] Configuración inválida: {e}{Colors.RESET}")
         print("  Copia .env.example a .env y ajusta OLLAMA_URL / OLLAMA_MODEL")
         return 1
 
     ui = TerminalUI()
+    ui.clear()
     ui.print_banner()
 
     provider = create_provider(settings)
     chat = ChatService(provider, settings)
     actions = ActionsService(settings, chat)
     memory = MemoryService(settings, actions)
+    direct = DirectCommands(ui, actions)
 
-    # Estado inicial
     st = provider.status()
-    ui.print_status(provider.name, provider.model, st.get("ready", False))
-
+    ui.print_status_bar(provider.name, provider.model, st.get("ready", False))
     if not st.get("ready"):
-        ui.print_warning("Ollama no responde o el modelo no está descargado.")
+        ui.print_warning(f"Ollama no responde o el modelo '{settings.ollama_model}' no está descargado.")
         ui.print_system(f"Ejecuta: ollama pull {settings.ollama_model}")
         ui.print_system("Y asegúrate de que 'ollama serve' esté corriendo.\n")
 
@@ -280,171 +471,98 @@ def main() -> int:
 
     while True:
         try:
-            user_input = input(ui.print_user_prompt()).strip()
+            user_input = input(ui.print_input_prompt()).strip()
         except (EOFError, KeyboardInterrupt):
-            print(f"\n{ui.GRAY}Chao. Hasta la próxima.{ui.RESET}")
+            print(f"\n{Colors.GRAY}Chao.{Colors.RESET}")
             return 0
 
         if not user_input:
             continue
 
-        # Comandos internos
+        # Comandos de salida
         if user_input.lower() in {"salir", "exit", "quit", "q"}:
-            print(f"{ui.GRAY}Chao. Hasta la próxima.{ui.RESET}")
+            print(f"{Colors.GRAY}Chao.{Colors.RESET}")
             return 0
 
-        if user_input == "/ayuda":
-            ui.print_help()
+        # Comandos directos (sin IA)
+        if direct.handle(user_input):
+            # Mostrar acciones pendientes después de proponer
+            ui.print_pending(actions.list_pending())
             continue
 
-        if user_input == "/memoria":
-            ui.print_memory(memory.get_preferences(), memory.list_routines())
-            continue
-
-        if user_input == "/acciones":
-            ui.print_actions(actions.audit_log(), actions.list_pending())
-            continue
-
-        if user_input == "/limpiar":
-            history.clear()
-            ui.print_system("Conversación limpiada. Memoria y acciones se mantienen.")
-            continue
-
-        if user_input == "/estado":
-            st = provider.status()
-            ui.print_status(provider.name, provider.model, st.get("ready", False))
-            continue
-
-        if user_input == "/confirmar":
-            pending = actions.list_pending()
-            if not pending:
-                ui.print_system("No hay acciones pendientes.")
+        # Comandos del sistema (con /)
+        if user_input.startswith("/"):
+            if user_input == "/ayuda":
+                ui.print_help()
                 continue
-            ui.print_pending_actions(pending)
-            # Pedir ID a confirmar
-            action_id = input(f"  {ui.CYAN}ID de acción a confirmar (o Enter para cancelar): {ui.RESET}").strip()
-            if not action_id:
-                ui.print_system("Cancelado.")
+            if user_input == "/memoria":
+                ui.print_memory(memory.get_preferences(), memory.list_routines())
                 continue
-            # Buscar coincidencia por prefijo
-            matches = [p for p in pending if p['id'].startswith(action_id)]
-            if not matches:
-                ui.print_error(f"No hay acción pendiente que empiece por '{action_id}'")
+            if user_input == "/acciones":
+                ui.print_actions(actions.audit_log(), actions.list_pending())
                 continue
-            if len(matches) > 1:
-                ui.print_error(f"Múltiples coincidencias. Usa más caracteres.")
+            if user_input == "/confirmar":
+                pending = actions.list_pending()
+                if not pending:
+                    ui.print_system("No hay acciones pendientes.")
+                    continue
+                ui.print_pending(pending)
+                action_id = input(f"  {Colors.CYAN}ID de acción a confirmar:{Colors.RESET} ").strip()
+                if not action_id:
+                    ui.print_system("Cancelado.")
+                    continue
+                matches = [p for p in pending if p["id"].startswith(action_id)]
+                if not matches:
+                    ui.print_error(f"No hay acción que empiece por '{action_id}'")
+                    continue
+                if len(matches) > 1:
+                    ui.print_error("Múltiples coincidencias. Usa más caracteres.")
+                    continue
+                item = matches[0]
+                dangerous = item.get("args", {}).get("dangerous", item["kind"] in {"execute", "write", "move", "delete"})
+                if ui.confirm_action(item["detail"], dangerous):
+                    try:
+                        result = actions.confirm_action(item["id"])
+                        ui.print_success(f"Ejecutada: {result}")
+                    except Exception as e:
+                        ui.print_error(f"Falló: {e}")
+                else:
+                    actions.cancel_action(item["id"])
+                    ui.print_system("Acción cancelada.")
                 continue
-            item = matches[0]
-            dangerous = item['kind'] in {'execute', 'write', 'delete'}
-            if ui.confirm_action(item['detail'], item['kind'], dangerous):
-                try:
-                    result = actions.confirm_action(item['id'])
-                    ui.print_system(f"✓ Ejecutada: {result}")
-                except Exception as e:
-                    ui.print_error(f"Falló: {e}")
-            else:
-                actions.cancel_action(item['id'])
+            if user_input == "/cancelar":
+                pending = actions.list_pending()
+                if not pending:
+                    ui.print_system("No hay acciones pendientes.")
+                    continue
+                ui.print_pending(pending)
+                action_id = input(f"  {Colors.CYAN}ID de acción a cancelar:{Colors.RESET} ").strip()
+                if not action_id:
+                    ui.print_system("Cancelado.")
+                    continue
+                matches = [p for p in pending if p["id"].startswith(action_id)]
+                if not matches:
+                    ui.print_error(f"No hay acción que empiece por '{action_id}'")
+                    continue
+                if len(matches) > 1:
+                    ui.print_error("Múltiples coincidencias. Usa más caracteres.")
+                    continue
+                actions.cancel_action(matches[0]["id"])
                 ui.print_system("Acción cancelada.")
+                continue
+            if user_input == "/limpiar":
+                history.clear()
+                ui.print_system("Conversación limpiada.")
+                continue
+            if user_input == "/estado":
+                st = provider.status()
+                ui.print_status_bar(provider.name, provider.model, st.get("ready", False))
+                continue
+            ui.print_error(f"Comando desconocido: {user_input}")
             continue
-
-        if user_input == "/cancelar":
-            pending = actions.list_pending()
-            if not pending:
-                ui.print_system("No hay acciones pendientes.")
-                continue
-            ui.print_pending_actions(pending)
-            action_id = input(f"  {ui.CYAN}ID de acción a cancelar (o Enter para cancelar): {ui.RESET}").strip()
-            if not action_id:
-                ui.print_system("Cancelado.")
-                continue
-            matches = [p for p in pending if p['id'].startswith(action_id)]
-            if not matches:
-                ui.print_error(f"No hay acción pendiente que empiece por '{action_id}'")
-                continue
-            if len(matches) > 1:
-                ui.print_error(f"Múltiples coincidencias. Usa más caracteres.")
-                continue
-            actions.cancel_action(matches[0]['id'])
-            ui.print_system("Acción cancelada.")
-            continue
-
-        # Detectar intención de acción ANTES de enviar al modelo
-        action_intent = detect_action_intent(user_input, actions)
-        proposed_action = None
-        if action_intent:
-            kind, detail, args = action_intent
-            # Resolver referencias (app_id, root, etc.)
-            if kind == "open" and "app_query" in args:
-                app_id = resolve_app_id(actions, args["app_query"])
-                if app_id:
-                    args = {"app_id": app_id}
-                else:
-                    ui.print_warning(f"No encontré una app que coincida con '{args['app_query']}'")
-                    action_intent = None
-            elif kind == "search":
-                root = resolve_root(actions, args.get("root", "")) if args.get("root") else "Documentos"
-                args = {"root": root, "query": args.get("query", "")}
-            elif kind == "summarize" and "path_query" in args:
-                # Buscar el archivo en roots
-                found = None
-                for root_name, root_path in actions.roots.items():
-                    matches = list(root_path.rglob(f"*{args['path_query']}*"))
-                    if matches:
-                        # Tomar el primero que sea archivo válido
-                        for m in matches:
-                            if m.is_file() and m.suffix.lower() in actions.ALLOWED_SUFFIXES:
-                                try:
-                                    rel = m.relative_to(root_path)
-                                    found = {"root": root_name, "path": str(rel)}
-                                    break
-                                except ValueError:
-                                    pass
-                        if found:
-                            break
-                if found:
-                    args = found
-                else:
-                    ui.print_warning(f"No encontré archivo que coincida con '{args['path_query']}' en tus carpetas")
-                    action_intent = None
-            elif kind == "read" and "path" in args:
-                # Expandir ~ y resolver relativo a roots
-                path = Path(args["path"]).expanduser()
-                if not path.is_absolute():
-                    # Intentar en roots
-                    for root_name, root_path in actions.roots.items():
-                        candidate = root_path / path
-                        if candidate.exists():
-                            args = {"path": str(candidate)}
-                            break
-                    else:
-                        args = {"path": str(path)}
-                else:
-                    args = {"path": str(path)}
-            elif kind == "list" and "path" in args:
-                path = Path(args["path"]).expanduser()
-                if not path.is_absolute():
-                    for root_name, root_path in actions.roots.items():
-                        candidate = root_path / path
-                        if candidate.exists():
-                            args = {"path": str(candidate)}
-                            break
-                    else:
-                        args = {"path": str(path)}
-                else:
-                    args = {"path": str(path)}
-
-            if action_intent:
-                kind, detail, args = action_intent
-                try:
-                    action_id = actions.propose_action(kind, detail, args)
-                    proposed_action = actions.pending[action_id]
-                    ui.print_system(f"💡 Propongo acción: {detail}  {ui.GRAY}[{action_id[:8]}]{ui.RESET}")
-                    if kind in {"execute", "write"}:
-                        ui.print_warning("Acción peligrosa: requerirá confirmación explícita (escribe 'CONFIRMO')")
-                except ActionError as e:
-                    ui.print_error(f"No se pudo proponer la acción: {e}")
 
         # Mensaje normal al modelo
+        ui.add_message("user", user_input)
         history.append({"role": "user", "content": user_input})
 
         ui.start_typing()
@@ -452,6 +570,7 @@ def main() -> int:
             answer = chat.reply(history)
             ui.stop_typing()
             ui.print_assistant(answer)
+            ui.add_message("assistant", answer)
             history.append({"role": "assistant", "content": answer})
         except InvalidConversation as e:
             ui.stop_typing()
