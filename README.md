@@ -3,6 +3,10 @@
 > Asistente personal para Ubuntu: conversación por texto/voz, análisis de archivos y proveedores intercambiables (OpenAI / Ollama local).  
 > Sin pantalla observada, sin memoria entre sesiones, sin control del equipo.
 
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-Apache_2.0-D22128?logo=apache&logoColor=white)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Activo-22C55E)]()
+
 ---
 
 ## Qué Resuelve
