@@ -4,19 +4,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101411">
+  <meta name="theme-color" content="#4B0082">
   <title>Abril — asistente personal</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0c100e;
-      --panel: #141a16;
-      --panel-2: #1b231e;
-      --line: #28332c;
-      --text: #edf3ee;
-      --muted: #8c9a90;
-      --green: #b7f080;
-      --green-2: #84bd54;
+      --indigo: #4B0082;
+      --indigo-2: #6a1bb0;
+      --bg: #0d0716;
+      --panel: #150c25;
+      --panel-2: #1f1235;
+      /* --line: #2f1d4d; */
+      --text: #ede7f8;
+      --muted: #9a8cb6;
+      --green: #c9a6ff;
+      --green-2: #8b3fd6;
       --danger: #ff9e91;
       --shadow: 0 28px 80px #0008
     }
@@ -28,7 +30,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: radial-gradient(ellipse at 52% -15%, #263a2b 0, transparent 43%), var(--bg);
+      background: radial-gradient(ellipse at 52% -15%, #4B008260 0, transparent 43%), var(--bg);
       color: var(--text);
       font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
       letter-spacing: .005em
@@ -72,11 +74,11 @@
       place-items: center;
       width: 38px;
       height: 38px;
-      border: 1px solid #b7f08055;
+      border: 1px solid #c9a6ff55;
       border-radius: 13px;
       color: var(--green);
       font: 600 20px Georgia, serif;
-      box-shadow: inset 0 0 18px #b7f08012
+      box-shadow: inset 0 0 18px #c9a6ff12
     }
 
     .brand-name {
@@ -98,17 +100,88 @@
       align-items: center;
       gap: 9px
     }
-    .action-btn { background:#18231a;border:1px solid #405b3d;border-radius:10px;padding:8px 12px;color:var(--green);font-size:12px }
-    .action-panel { position:fixed;inset:0;background:#000a;display:none;z-index:5;overflow:auto;padding:24px }
-    .action-panel.open { display:block }
-    .action-card { max-width:720px;margin:4vh auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow) }
-    .action-card h2 { margin:0 0 8px }.action-card p { color:var(--muted) }
-    .action-card select,.action-card input { background:#0c100e;border:1px solid var(--line);color:var(--text);padding:10px;border-radius:9px;max-width:100% }
-    .action-row { display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 20px }
-    .action-card button { background:#202b22;border:1px solid #38473b;border-radius:9px;padding:9px 12px }
-    .action-card .close-actions { float:right }
-    #actionResults,#actionLog { max-height:28vh;overflow:auto;padding-left:20px;color:#cbd6cd }
-    .result-item { margin:8px 0;overflow-wrap:anywhere }
+
+    .action-btn {
+      background: #240f3f;
+      border: 1px solid #5b2c94;
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: var(--green);
+      font-size: 12px
+    }
+
+    .action-panel {
+      position: fixed;
+      inset: 0;
+      background: #000a;
+      display: none;
+      z-index: 5;
+      overflow: auto;
+      padding: 24px
+    }
+
+    .action-panel.open {
+      display: block
+    }
+
+    .action-card {
+      max-width: 720px;
+      margin: 4vh auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow)
+    }
+
+    .action-card h2 {
+      margin: 0 0 8px
+    }
+
+    .action-card p {
+      color: var(--muted)
+    }
+
+    .action-card select,
+    .action-card input {
+      background: #0f081c;
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 9px;
+      max-width: 100%
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 20px
+    }
+
+    .action-card button {
+      background: #26153f;
+      border: 1px solid #43296a;
+      border-radius: 9px;
+      padding: 9px 12px
+    }
+
+    .action-card .close-actions {
+      float: right
+    }
+
+    #actionResults,
+    #actionLog {
+      max-height: 28vh;
+      overflow: auto;
+      padding-left: 20px;
+      color: #d0c5e4
+    }
+
+    .result-item {
+      margin: 8px 0;
+      overflow-wrap: anywhere
+    }
 
     .status {
       display: flex;
@@ -131,7 +204,7 @@
 
     .dot.ok {
       background: var(--green);
-      box-shadow: 0 0 10px #b7f08080
+      box-shadow: 0 0 10px #c9a6ff80
     }
 
     .icon-btn {
@@ -142,7 +215,7 @@
       background: transparent;
       border: 1px solid var(--line);
       border-radius: 11px;
-      color: #aab7ad
+      color: #b3a5cf
     }
 
     .icon-btn:hover {
@@ -171,9 +244,9 @@
       border-radius: 50%;
       display: grid;
       place-items: center;
-      background: radial-gradient(circle at 40% 38%, #334b35, #17231a 65%, #101511);
-      border: 1px solid #b7f0804d;
-      box-shadow: 0 0 55px #a6e86a16, inset 0 0 22px #b7f08012;
+      background: radial-gradient(circle at 40% 38%, #6a1bb0, #3a0766 65%, #170a26);
+      border: 1px solid #c9a6ff4d;
+      box-shadow: 0 0 55px #8b3fd630, inset 0 0 22px #c9a6ff12;
       color: var(--green);
       font: 48px Georgia, serif;
       animation: breath 4s ease-in-out infinite
@@ -181,7 +254,7 @@
 
     @keyframes breath {
       50% {
-        box-shadow: 0 0 75px #a6e86a25, inset 0 0 28px #b7f08020
+        box-shadow: 0 0 75px #8b3fd655, inset 0 0 28px #c9a6ff20
       }
     }
 
@@ -206,9 +279,9 @@
     }
 
     .chip {
-      background: #151d17;
-      border: 1px solid #334238;
-      color: #c5d1c7;
+      background: #1a0f2e;
+      border: 1px solid #43296a;
+      color: #d3c8e8;
       border-radius: 99px;
       padding: 9px 14px;
       font-size: 12px;
@@ -216,7 +289,7 @@
     }
 
     .chip:hover {
-      border-color: #9fd56d88;
+      border-color: #c9a6ff88;
       color: var(--green);
       transform: translateY(-1px)
     }
@@ -228,7 +301,7 @@
       padding: 30px 3px 26px;
       overflow: auto;
       max-height: calc(100vh - 260px);
-      scrollbar-color: #334139 transparent
+      scrollbar-color: #3a2560 transparent
     }
 
     .conversation.active {
@@ -255,7 +328,7 @@
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: .12em;
-      color: #829086;
+      color: #8f81ab;
       padding: 0 4px
     }
 
@@ -266,16 +339,17 @@
     .bubble {
       padding: 14px 17px;
       border-radius: 17px;
-      background: #18201b;
-      border: 1px solid #29352d;
-      color: #e2eae3;
+      background: #1a0f2e;
+      border: 1px solid #33204f;
+      color: #ece6f7;
       white-space: pre-wrap;
       overflow-wrap: anywhere
     }
 
     .user .bubble {
-      background: #263629;
-      border-color: #3b523f;
+      background: var(--indigo);
+      border-color: #7a2fc0;
+      color: #fff;
       border-bottom-right-radius: 5px
     }
 
@@ -290,7 +364,7 @@
 
     .bubble code {
       font-family: ui-monospace, monospace;
-      background: #0d130f;
+      background: #0a0512;
       padding: 2px 5px;
       border-radius: 4px
     }
@@ -318,7 +392,7 @@
     .mini-btn {
       border: 0;
       background: transparent;
-      color: #758379;
+      color: #8a7ca6;
       padding: 2px 7px;
       font-size: 11px
     }
@@ -376,8 +450,8 @@
     }
 
     .composer {
-      border: 1px solid #344137;
-      background: #151c17;
+      border: 1px solid #3a2560;
+      background: #170d28;
       border-radius: 20px;
       padding: 11px 12px 10px;
       box-shadow: var(--shadow);
@@ -385,7 +459,7 @@
     }
 
     .composer:focus-within {
-      border-color: #8abd6380
+      border-color: #b07cf080
     }
 
     .attachment-row {
@@ -403,18 +477,18 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      border: 1px solid #36463a;
-      background: #1e2921;
+      border: 1px solid #43296a;
+      background: #26153f;
       border-radius: 99px;
       padding: 4px 9px;
       font-size: 11px;
-      color: #c9d7ca
+      color: #d6c9ec
     }
 
     .file-pill button {
       border: 0;
       background: none;
-      color: #8e9d91;
+      color: #a798c4;
       padding: 0 1px
     }
 
@@ -438,7 +512,7 @@
     }
 
     .composer textarea::placeholder {
-      color: #77857a
+      color: #85769f
     }
 
     .tool-btn {
@@ -450,12 +524,12 @@
       border: 1px solid transparent;
       background: transparent;
       border-radius: 12px;
-      color: #99a89d;
+      color: #ab9cc8;
       transition: .18s
     }
 
     .tool-btn:hover {
-      background: #232e26;
+      background: #26153f;
       color: var(--green)
     }
 
@@ -472,8 +546,8 @@
     }
 
     .send-btn {
-      background: var(--green);
-      color: #172013;
+      background: var(--indigo);
+      color: #fff;
       border: 0;
       border-radius: 12px;
       width: 40px;
@@ -484,7 +558,7 @@
     }
 
     .send-btn:hover {
-      background: #cbffa0;
+      background: var(--indigo-2);
       transform: translateY(-1px)
     }
 
@@ -497,24 +571,24 @@
       display: flex;
       justify-content: space-between;
       padding: 9px 6px 0;
-      color: #69776d;
+      color: #76688f;
       font-size: 10px
     }
 
     .hint span:last-child {
-      color: #59655d
+      color: #665981
     }
 
     .notice {
       margin: 11px auto 0;
       text-align: center;
-      color: #68766d;
+      color: #76688f;
       font-size: 10px
     }
 
     .notice b {
       font-weight: 500;
-      color: #859389
+      color: #9588ae
     }
 
     .alert {
@@ -545,7 +619,7 @@
     .modal {
       width: min(480px, 100%);
       border: 1px solid var(--line);
-      background: #161d18;
+      background: #170d28;
       border-radius: 18px;
       padding: 23px;
       box-shadow: var(--shadow)
@@ -557,14 +631,14 @@
     }
 
     .modal p {
-      color: #a7b3a9;
+      color: #b3a6cc;
       font-size: 13px
     }
 
     .modal button {
       margin-top: 10px;
-      border: 1px solid #405044;
-      background: #202b23;
+      border: 1px solid #43296a;
+      background: #26153f;
       border-radius: 9px;
       padding: 8px 12px
     }
@@ -626,18 +700,19 @@
         </div>
       </div>
       <div class="header-right">
-        <button class="action-btn" id="actionsBtn" type="button">Acciones</button>
-        <button class="action-btn" id="memoryBtn" type="button">Memoria</button>
-        <div class="status" title="Estado del motor de IA"><span class="dot" id="statusDot"></span><span
-            id="statusText">Conectando…</span></div><button class="icon-btn" id="settingsBtn"
-          aria-label="Información y configuración" title="Información">i</button>
+        <div class="status" title="Estado del motor de IA">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Conectando…</span>
+        </div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Configuración de Abril"
+          title="Configuración">⚙</button>
       </div>
     </header>
     <main>
       <section class="welcome" id="welcome">
-        <div class="orb">A</div>
-        <h1>Hola, ¿qué vamos a descubrir?</h1>
-        <p class="intro">Puedo ayudarte a pensar, resumir y encontrar patrones en lo que compartas.</p>
+        <!-- <div class="orb">A</div> -->
+        <h1>Bienvenido Sr. Sarmiento</h1>
+        <!--<p class="intro">Puedo ayudarte a pensar, resumir y encontrar patrones en lo que compartas.</p>
         <div class="suggestions">
           <button class="chip"
             data-prompt="Resume las ideas principales de este texto y dime qué debería recordar.">Resumir un
@@ -648,7 +723,7 @@
           <button class="chip"
             data-prompt="Ayúdame a convertir esta idea en un plan claro con pasos concretos y prioridades.">Desarrollar
             una idea</button>
-        </div>
+        </div> -->
       </section>
       <section class="conversation" id="conversation" aria-live="polite"></section>
     </main>
@@ -676,44 +751,17 @@
       <div class="notice">Abril solo realiza acciones locales que seleccionas explícitamente.</div>
     </div>
   </div>
-  <div class="action-panel" id="actionPanel">
-    <section class="action-card">
-      <button class="close-actions" id="closeActions" type="button">Cerrar</button>
-      <h2>Acciones locales</h2><p>Abrir una app o buscar documentos por nombre en Documentos, Escritorio o Descargas. Los resúmenes se procesan con Ollama local.</p>
-      <h3>Abrir aplicación</h3><div class="action-row"><select id="appSelect" aria-label="Aplicación instalada"></select><button id="openApp" type="button">Abrir</button></div>
-      <h3>Buscar archivo</h3><div class="action-row"><select id="rootSelect" aria-label="Ubicación"></select><input id="searchQuery" maxlength="100" placeholder="Nombre del archivo"><button id="searchFiles" type="button">Buscar</button></div>
-      <ul id="actionResults"></ul><p id="actionMessage" role="status"></p>
-      <h3>Actividad reciente</h3><ul id="actionLog"></ul>
-      <h3>Acciones pendientes</h3><ul id="pendingList"></ul>
-    </section>
-  </div>
-  <div class="action-panel" id="memoryPanel">
-    <section class="action-card">
-      <button class="close-actions" id="closeMemory" type="button">Cerrar</button>
-      <h2>Memoria personal</h2>
-      <p>Tus preferencias y rutinas. Todo es visible, editable y borrable. Las sugerencias se presentan como propuestas para que tú las confirmes.</p>
-      <h3>Preferencias</h3><div id="prefList"></div>
-      <div class="action-row"><input id="prefKey" placeholder="Clave"><input id="prefValue" placeholder="Valor"><button id="prefSave" type="button">Guardar</button></div>
-      <h3>Rutinas</h3><div id="routineList"></div>
-      <div class="action-row"><input id="routineName" placeholder="Nombre de la rutina"><input id="routineDesc" placeholder="Descripción"><button id="routineSave" type="button">Guardar rutina</button></div>
-      <h3>Sugerencias de rutina</h3><p id="suggestHint" style="color:var(--muted);font-size:12px">Basadas en acciones repetidas de tu actividad reciente.</p><div id="suggestionList"></div>
-    </section>
-  </div>
   <div class="modal-bg" id="modalBg">
-    <div class="modal"><button class="close" id="closeModal">×</button>
-      <h2>Sobre Abril</h2>
-      <p id="providerInfo">Cargando información…</p>
-      <p>Tu conversación vive en esta pestaña y no se guarda en disco. El mensaje se envía al motor de IA configurado:
-        Ollama local o un proveedor compatible con OpenAI.</p>
-      <p>Los archivos compatibles son texto: TXT, Markdown, CSV, JSON y LOG. No adjuntes información que no quieras
-        enviar al proveedor configurado.</p><button id="clearBtn">Limpiar conversación</button>
+    <div class="modal" style="max-width:640px;max-height:70vh;overflow:auto"><button class="close" id="closeModal">×</button>
+      <h2>Configuración de Abril</h2>
+      <div id="providerInfo" style="white-space:pre-wrap;font-size:13px;line-height:1.6"></div>
+      <button id="clearBtn">Limpiar conversación</button>
     </div>
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
     const prompt = $('prompt'), form = $('form'), sendBtn = $('sendBtn'), conversation = $('conversation'), welcome = $('welcome');
     const history = []; let pendingFiles = []; let busy = false; let recognition = null;
-    const memoryBtn = $('memoryBtn'), memoryPanel = $('memoryPanel'), closeMemory = $('closeMemory');
     const esc = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     function formatText(text) {
       let html = esc(text).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -753,25 +801,42 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) { recognition = new SpeechRecognition(); recognition.lang = 'es-CO'; recognition.interimResults = true; recognition.continuous = false; recognition.onresult = e => { let final = ''; for (let i = e.resultIndex; i < e.results.length; i++)final += e.results[i][0].transcript; prompt.value = final; resize(); }; recognition.onend = () => $('micBtn').classList.remove('recording'); recognition.onerror = e => { $('micBtn').classList.remove('recording'); setAlert(e.error === 'not-allowed' ? 'El navegador no tiene permiso para usar el micrófono.' : 'No se pudo reconocer la voz.'); }; $('micBtn').onclick = () => { try { recognition.start(); $('micBtn').classList.add('recording'); } catch { recognition.stop(); } }; }
     else { $('micBtn').onclick = () => setAlert('Este navegador no ofrece dictado por voz. Prueba Chromium o Chrome y permite el micrófono para localhost.'); $('voiceHint').textContent = 'Dictado no compatible en este navegador'; }
-    $('settingsBtn').onclick = async () => { try { const s = await (await fetch('/api/status')).json(); $('providerInfo').textContent = `Motor: ${s.provider} · Modelo: ${s.model}. Edita la configuración en el archivo .env y reinicia Abril.`; } catch { $('providerInfo').textContent = 'No se pudo consultar la configuración del motor.'; } $('modalBg').classList.add('open'); };
-    const actionPanel = $('actionPanel');
-    async function api(path, payload, method) { const response = await fetch(path, { method: method || (payload ? 'POST' : 'GET'), headers: payload || method ? {'Content-Type':'application/json'} : {}, body: payload ? JSON.stringify(payload) : undefined }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'No se pudo completar la acción.'); return data; }
-    async function refreshAudit() { try { const {entries} = await api('/api/actions/log'); $('actionLog').innerHTML = entries.length ? entries.map(e => `<li>${esc(e.time)} · ${esc(e.action)} · ${esc(e.detail)} — ${esc(e.result)}</li>`).join('') : '<li>Sin acciones todavía.</li>'; } catch {} }
-    $('actionsBtn').onclick = async () => { actionPanel.classList.add('open'); $('actionMessage').textContent = 'Cargando…'; try { const [apps,roots] = await Promise.all([api('/api/apps'),api('/api/actions/roots')]); $('appSelect').innerHTML = apps.apps.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join(''); $('rootSelect').innerHTML = roots.roots.map(x => `<option>${esc(x)}</option>`).join(''); $('actionMessage').textContent = `${apps.apps.length} aplicaciones disponibles.`; await refreshAudit(); await loadPending(); } catch (e) { $('actionMessage').textContent=e.message; } };
-    $('closeActions').onclick = () => actionPanel.classList.remove('open'); actionPanel.addEventListener('click', e => {if(e.target===actionPanel) actionPanel.classList.remove('open');});
-    $('memoryBtn').onclick = async () => { memoryPanel.classList.add('open'); await loadPreferences(); await loadRoutines(); await loadSuggestions(); };
-    $('closeMemory').onclick = () => memoryPanel.classList.remove('open'); memoryPanel.addEventListener('click', e => { if (e.target === memoryPanel) memoryPanel.classList.remove('open'); });
-    $('openApp').onclick = async () => { try { const {action_id}=await api('/api/actions/propose',{kind:'open',detail:'Abrir aplicación '+$('appSelect').options[$('appSelect').selectedIndex].text,args:{app_id:$('appSelect').value}}); $('actionMessage').textContent='Acción propuesta: '+$('appSelect').options[$('appSelect').selectedIndex].text+'. Revisa «Acciones pendientes» y confírmala para ejecutar.'; await loadPending(); } catch(e) {$('actionMessage').textContent=e.message;} };
-    $('searchFiles').onclick = async () => { const list=$('actionResults'); list.innerHTML=''; $('actionMessage').textContent='Buscando…'; try { const {results}=await api('/api/actions/search',{root:$('rootSelect').value,query:$('searchQuery').value}); $('actionMessage').textContent=`${results.length} resultado(s).`; list.innerHTML=results.map(f=>`<li class="result-item">${esc(f.path)} <button type="button" data-path="${esc(f.path)}">Resumir</button></li>`).join('') || '<li>No se encontraron archivos compatibles.</li>'; list.querySelectorAll('button').forEach(b=>b.onclick=async()=>{ $('actionMessage').textContent='Generando resumen local… Puedes cerrar este panel para dejar de esperar.'; b.disabled=true; await api('/api/actions/propose',{kind:'summarize',detail:'Resumir '+b.dataset.path,args:{root:$('rootSelect').value,path:b.dataset.path}}); await loadPending(); $('actionMessage').textContent='Propuesta de resumen creada. Revisa «Acciones pendientes» y confírmala.'; } catch(e) {$('actionMessage').textContent=e.message;} }); await refreshAudit(); } catch(e) {$('actionMessage').textContent=e.message;} };
-    $('closeModal').onclick = () => $('modalBg').classList.remove('open'); $('modalBg').addEventListener('click', e => { if (e.target === $('modalBg')) $('modalBg').classList.remove('open'); });
+    async function api(path, payload, method) { const response = await fetch(path, { method: method || (payload ? 'POST' : 'GET'), headers: payload || method ? { 'Content-Type': 'application/json' } : {}, body: payload ? JSON.stringify(payload) : undefined }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'No se pudo completar la acción.'); return data; }
+    async function openConfig() {
+      try {
+        const [status, prefs, routines] = await Promise.all([
+          api('/api/status'),
+          api('/api/memory/preferences'),
+          api('/api/memory/routines'),
+        ]);
+        const lines = [`Motor: ${status.provider} · ${status.model}.`];
+        lines.push('—');
+        const prefEntries = Object.entries(prefs.preferences || {});
+        if (prefEntries.length) {
+          lines.push('Preferencias guardadas:');
+          prefEntries.forEach(([k, v]) => lines.push(`  ${k} = ${v}`));
+        } else {
+          lines.push('Sin preferencias guardadas.');
+        }
+        lines.push('—');
+        const routineList = routines.routines || [];
+        if (routineList.length) {
+          lines.push('Rutinas:');
+          routineList.forEach(r => lines.push(`  ${r.name}${r.description ? ' — ' + r.description : ''} [${r.confirmed ? 'confirmada' : 'pendiente'}]`));
+        } else {
+          lines.push('Sin rutinas guardadas.');
+        }
+        $('providerInfo').innerHTML = lines.map(l => `<div>${esc(l)}</div>`).join('');
+      } catch {
+        $('providerInfo').textContent = 'No se pudo cargar la configuración.';
+      }
+      $('modalBg').classList.add('open');
+    }
+    $('settingsBtn').onclick = openConfig;
+    $('closeModal').onclick = () => $('modalBg').classList.remove('open');
+    $('modalBg').addEventListener('click', e => { if (e.target === $('modalBg')) $('modalBg').classList.remove('open'); });
     $('clearBtn').onclick = () => { history.length = 0; conversation.innerHTML = ''; conversation.classList.remove('active'); welcome.style.display = 'block'; window.speechSynthesis?.cancel(); $('modalBg').classList.remove('open'); };
     document.querySelectorAll('.chip').forEach(chip => chip.onclick = () => { prompt.value = chip.dataset.prompt; resize(); prompt.focus(); });
-    async function loadPending() { try { const {pending} = await api('/api/actions/pending'); const list = $('pendingList'); if (!pending.length) { list.innerHTML = '<li style="color:var(--muted)">Sin acciones pendientes.</li>'; return; } list.innerHTML = pending.map(p => `<li class="result-item">${esc(p.detail)} <button type="button" data-id="${esc(p.id)}">Confirmar</button> <button type="button" data-id="${esc(p.id)}">Cancelar</button></li>`).join(''); list.querySelectorAll('button').forEach(b => { b.onclick = async () => { if (b.textContent === 'Confirmar') { try { await api('/api/actions/confirm', { action_id: b.dataset.id }); $('actionMessage').textContent = 'Acción ejecutada.'; await loadPending(); await refreshAudit(); } catch (e) { $('actionMessage').textContent = e.message; } } else { try { await api('/api/actions/cancel', { action_id: b.dataset.id }); $('actionMessage').textContent = 'Acción cancelada.'; await loadPending(); await refreshAudit(); } catch (e) { $('actionMessage').textContent = e.message; } } }; }); } catch { $('pendingList').innerHTML = ''; } }
-    async function loadPreferences() { try { const {preferences} = await api('/api/memory/preferences'); const list = $('prefList'); list.innerHTML = Object.entries(preferences).map(([k, v]) => `<span class="file-pill">${esc(k)}=${esc(String(v))} <button type="button" data-key="${esc(k)}">×</button></span>`).join('') || '<span style="color:var(--muted)">Sin preferencias guardadas.</span>'; list.querySelectorAll('button').forEach(b => { b.onclick = async () => { try { await api('/api/memory/preferences/' + b.dataset.key, null, 'DELETE'); await loadPreferences(); } catch (e) { $('actionMessage').textContent = e.message; } }; }); } catch { $('prefList').textContent = 'No se pudieron cargar las preferencias.'; } }
-    $('prefSave').onclick = async () => { const k = $('prefKey').value.trim(); const v = $('prefValue').value.trim(); if (!k) return; try { await api('/api/memory/preferences', { key: k, value: v }); $('prefKey').value = ''; $('prefValue').value = ''; await loadPreferences(); } catch (e) { $('actionMessage').textContent = e.message; } };
-    async function loadRoutines() { try { const {routines} = await api('/api/memory/routines'); const list = $('routineList'); list.innerHTML = routines.map(r => `<div style="margin:6px 0"><strong>${esc(r.name)}</strong> ${esc(r.description) ? '— ' + esc(r.description) : ''} <span style="color:var(--muted);font-size:11px">[${r.confirmed ? 'confirmada' : 'pendiente'}]</span> <button type="button" data-id="${esc(r.id)}">${r.confirmed ? 'Desconfirmar' : 'Confirmar'}</button> <button type="button" data-id="${esc(r.id)}" style="color:var(--danger)">×</button></div>`).join('') || '<span style="color:var(--muted)">Sin rutinas.</span>'; list.querySelectorAll('button').forEach(b => { b.onclick = async () => { if (b.textContent === '×') { try { await api('/api/memory/routines/' + b.dataset.id, null, 'DELETE'); await loadRoutines(); } catch (e) { $('actionMessage').textContent = e.message; } } else { try { await api('/api/memory/routines/' + b.dataset.id, { _method: 'CONFIRM' }, 'POST'); await loadRoutines(); } catch (e) { $('actionMessage').textContent = e.message; } } }; }); } catch { $('routineList').textContent = 'No se pudieron cargar las rutinas.'; } }
-    $('routineSave').onclick = async () => { const name = $('routineName').value.trim(); const desc = $('routineDesc').value.trim(); if (!name) return; try { await api('/api/memory/routines', { name, description: desc, actions: [] }); $('routineName').value = ''; $('routineDesc').value = ''; await loadRoutines(); await loadSuggestions(); } catch (e) { $('actionMessage').textContent = e.message; } };
-    async function loadSuggestions() { try { const {suggestions} = await api('/api/memory/suggestions'); const list = $('suggestionList'); list.innerHTML = suggestions.map(s => `<div class="file-pill" style="margin:4px 0">${esc(s.name)}: ${esc(s.description)} <button type="button" data-name="${esc(s.name)}" data-desc="${esc(s.description)}">Confirmar rutina</button></div>`).join('') || '<span style="color:var(--muted)">Sin sugerencias todavía. Las acciones repetidas aparecerán aquí.</span>'; list.querySelectorAll('button').forEach(b => { b.onclick = async () => { try { await api('/api/memory/routines', { name: b.dataset.name, description: b.dataset.desc, actions: [] }); await loadRoutines(); await loadSuggestions(); } catch (e) { $('actionMessage').textContent = e.message; } }; }); } catch { $('suggestionList').textContent = ''; } }
     fetch('/api/status').then(r => r.json()).then(s => { if (s.ready) { $('statusText').textContent = `${s.provider} · ${s.model}`; $('statusDot').classList.add('ok'); } else { $('statusText').textContent = s.status_message || 'Motor no disponible'; $('statusDot').classList.remove('ok'); } }).catch(() => { $('statusText').textContent = 'Sin servidor'; });
   </script>
 </body>
