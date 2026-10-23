@@ -60,3 +60,11 @@ def test_model_selection():
 
     decision = route("escribe un algoritmo complejo", routing_enabled=True, light_model="small", heavy_model="large")
     assert decision.model == "large"
+
+
+def test_model_selection_uses_hardware_tier():
+    decision = route("qué hora es", routing_enabled=True, hardware_tier="low")
+    assert decision.model == "qwen2.5:0.5b"
+
+    decision = route("escribe un algoritmo", routing_enabled=True, hardware_tier="gpu")
+    assert decision.model == "qwen2.5:7b"

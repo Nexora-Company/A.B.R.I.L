@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from abril.services.hardware import HardwareProfile, detect_hardware, _TIER_CONFIG
+from abril.services.hardware import HardwareProfile, detect_hardware, recommended_models, _TIER_CONFIG
 
 
 def test_hardware_profile_tier_classification():
@@ -51,3 +51,11 @@ def test_hardware_profile_to_dict():
     assert d["cpu_cores"] == 4
     assert d["tier"] == "mid"
     assert "suggested_model" in d
+
+
+def test_recommended_models_by_tier():
+    assert recommended_models("low") == ("qwen2.5:0.5b", "qwen2.5:1.5b")
+    assert recommended_models("mid") == ("qwen2.5:1.5b", "qwen2.5:3b")
+    assert recommended_models("gpu") == ("qwen2.5:3b", "qwen2.5:7b")
+    # Tier desconocido cae en mid
+    assert recommended_models("desconocido") == recommended_models("mid")

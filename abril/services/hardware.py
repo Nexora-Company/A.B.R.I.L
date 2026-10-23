@@ -206,6 +206,20 @@ def _apply_tier(profile: HardwareProfile) -> None:
         profile.num_threads = min(profile.cpu_threads, 8)
 
 
+# Modelo ligero (router carril 2) y pesado (carril 3) por tier.
+_TIER_MODELS = {
+    "low": ("qwen2.5:0.5b", "qwen2.5:1.5b"),
+    "mid": ("qwen2.5:1.5b", "qwen2.5:3b"),
+    "high": ("qwen2.5:1.5b", "qwen2.5:3b"),
+    "gpu": ("qwen2.5:3b", "qwen2.5:7b"),
+}
+
+
+def recommended_models(tier: str) -> tuple[str, str]:
+    """Devuelve ``(ligero, pesado)`` según el tier de hardware detectado."""
+    return _TIER_MODELS.get(tier, _TIER_MODELS["mid"])
+
+
 def detect_hardware() -> HardwareProfile:
     """Detecta hardware y devuelve perfil con sugerencias."""
     cores, threads = _detect_cpu()
@@ -257,4 +271,5 @@ __all__ = [
     "load_profile",
     "save_profile",
     "get_or_create_profile",
+    "recommended_models",
 ]

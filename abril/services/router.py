@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from .hardware import recommended_models
+
 
 class Lane(Enum):
     RULES = 1      # Comandos directos, aliases, coincidencia exacta
@@ -101,8 +103,9 @@ def route(
     text: str,
     *,
     routing_enabled: bool = False,
-    light_model: str = "qwen2.5:1.5b",
-    heavy_model: str = "qwen2.5:3b",
+    light_model: str | None = None,
+    heavy_model: str | None = None,
+    hardware_tier: str = "mid",
 ) -> RouteDecision:
     """
     Clasifica `text` y devuelve la decisión de enrutamiento.
@@ -110,12 +113,18 @@ def route(
     Args:
         text: Entrada del usuario.
         routing_enabled: Si False, siempre devuelve carril 3 (compatibilidad).
-        light_model: Modelo para carril 2.
-        heavy_model: Modelo para carril 3.
+        light_model: Modelo para carril 2. Si se omite, se elige por hardware.
+        heavy_model: Modelo para carril 3. Si se omite, se elige por hardware.
+        hardware_tier: Tier detectado (low/mid/high/gpu) para elegir modelos.
 
     Returns:
         RouteDecision con lane, intent, confidence, model sugerido y razón.
     """
+    if light_model is None or heavy_model is None:
+        suggested_light, suggested_heavy = recommended_models(hardware_tier)
+        light_model = light_model or suggested_light
+        heavy_model = heavy_model or suggested_heavy
+
     if not routing_enabled:
         return RouteDecision(
             lane=Lane.HEAVY,
