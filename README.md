@@ -76,18 +76,40 @@ A.B.R.I.L propone la acción; la confirmas con `/confirmar`.
 main.py
 abril/ (paquete)
   __init__.py
+  app/         bootstrap, flags de funcionalidad, comandos extraídos
   config.py
   providers/   base, factory, ollama, http
   services/    chat, actions, memory, pattern_analyzer
-data/          audit_log.json, memory.json (generados)
+  ui/          protocolo de interfaz de terminal
+  utils/       detección de lenguaje
+docs/adr/      decisiones de arquitectura
+tests/         pruebas con proveedor falso (sin Ollama)
+data/          audit_log.json, memory.json, config.json (generados)
 ```
+
+## Desarrollo
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+pytest
+ruff check .
+mypy
+```
+
+Los flags de funcionalidad viven en `data/config.json` y se pueden consultar o cambiar en caliente con `/config` (por ejemplo, `/config set routing on`). Con todos los flags apagados, A.B.R.I.L se comporta como antes de la Fase 0.
 
 ## Hoja de ruta
 
-- [ ] Añadir tests automatizados (`{{TODO}}`).
-- [ ] Añadir `pyproject.toml` o `requirements.txt` (`{{TODO}}`).
-- [ ] Configurar CI (`{{TODO}}`).
-- [ ] Documentar uso de `ABRIL_HOST`/`ABRIL_PORT` (`{{TODO}}`).
+- [x] Tests automatizados con proveedor falso.
+- [x] `pyproject.toml` con extras opcionales.
+- [x] CI (lint, tipos y tests).
+- [x] Lectura de `ABRIL_HOST`/`ABRIL_PORT` (reservados para modos futuros).
+- [ ] Fase 1: router de tres carriles, perfiles de hardware, permisos por niveles y memoria SQLite.
+- [ ] Fase 2: tareas en segundo plano, varios modelos, búsqueda web y proveedores externos.
+- [ ] Fase 3: voz local, protocolos, proactividad, integraciones y HUD.
 
 ## Contribuir
 

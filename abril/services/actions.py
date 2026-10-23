@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 from ..config import Settings
-from ..providers.base import ProviderError
 from .chat import ChatService
 
 
@@ -97,7 +96,7 @@ class ActionsService:
                 continue
             for path in directory.glob("*.desktop"):
                 try:
-                    fields = {}
+                    fields: dict[str, str] = {}
                     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
                         if "=" in line and not line.startswith(("#", "[")):
                             key, value = line.split("=", 1)
@@ -390,7 +389,7 @@ class ActionsService:
         # Lista de comandos peligrosos que requieren doble confirmación (se maneja en UI)
         dangerous = {"rm", "rmdir", "mv", "cp", "dd", "mkfs", "fdisk", "parted", "shutdown", "reboot", "poweroff", "systemctl", "service", "apt", "dnf", "pacman", "pip", "npm", "cargo", "make", "sudo", "su", "chmod", "chown", "passwd", "useradd", "userdel", "groupadd", "groupdel"}
         first = argv[0].split("/")[-1] if argv else ""
-        is_dangerous = first in dangerous or any(arg in {"-rf", "-r", "--recursive", "--force"} for arg in argv)
+        _is_dangerous = first in dangerous or any(arg in {"-rf", "-r", "--recursive", "--force"} for arg in argv)
         try:
             result = subprocess.run(argv, capture_output=True, text=True, timeout=30, check=False)
         except subprocess.TimeoutExpired:

@@ -2,13 +2,24 @@
 #  ANALIZADOR DE PATRONES Y SUGERIDOR DE IDEAS (Fase C)
 # ═════════════════════════════════════════════════════════════════════════════
 
+from __future__ import annotations
+
+import shlex
+from pathlib import Path
+
+from ..ui.protocol import UIPort
+from ..utils.language import detect_language
+from .actions import ActionsService
+from .chat import ChatService
+from .memory import MemoryService
+
 MAX_PATTERN_CHARS = 30_000
 
 
 class PatternAnalyzer:
     """Analiza patrones de uso, sugiere ideas y permite pensar profundamente."""
 
-    def __init__(self, ui: TerminalUI, chat: ChatService, memory: MemoryService, actions: ActionsService) -> None:
+    def __init__(self, ui: UIPort, chat: ChatService, memory: MemoryService, actions: ActionsService) -> None:
         self.ui = ui
         self.chat = chat
         self.memory = memory
@@ -23,7 +34,10 @@ class PatternAnalyzer:
         if not text:
             return False
 
-        parts = shlex.split(text)
+        try:
+            parts = shlex.split(text)
+        except ValueError:
+            return False
         if not parts:
             return False
         cmd = parts[0].lower()
@@ -64,11 +78,11 @@ class PatternAnalyzer:
             for entry in audit[-20:]:
                 partes.append(f"{entry['time']} · {entry['action']} · {entry['detail']} — {entry['result']}")
         if prefs:
-            partes.append("\\n=== PREFERENCIAS GUARDADAS ===")
+            partes.append("\n=== PREFERENCIAS GUARDADAS ===")
             for k, v in prefs.items():
                 partes.append(f"{k} = {v}")
         if routines:
-            partes.append("\\n=== RUTINAS ===")
+            partes.append("\n=== RUTINAS ===")
             for r in routines:
                 estado = "confirmada" if r.get("confirmed") else "pendiente"
                 partes.append(f"{r['name']} — {r.get('description', '')} [{estado}]")
@@ -77,7 +91,7 @@ class PatternAnalyzer:
             self.ui.print_warning("No hay suficiente datos para analizar. Usa Abril un poco más.")
             return True
 
-        contexto = "\\n".join(partes[:MAX_PATTERN_CHARS])
+        contexto = "\n".join(partes[:MAX_PATTERN_CHARS])
 
         system_prompt = (
             "Eres un analista de patrones experto. Analiza el siguiente contexto de uso del usuario "
@@ -91,7 +105,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Contexto de uso del usuario:\\n{contexto}"},
+                {"role": "user", "content": f"Contexto de uso del usuario:\n{contexto}"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()
@@ -112,7 +126,7 @@ class PatternAnalyzer:
         partes = []
         for entry in audit[-30:]:
             partes.append(f"{entry['time']} · {entry['action']} · {entry['detail']} — {entry['result']}")
-        contexto = "\\n".join(partes[:MAX_PATTERN_CHARS])
+        contexto = "\n".join(partes[:MAX_PATTERN_CHARS])
 
         system_prompt = (
             "Eres un analista de patrones. Analiza el historial de acciones del usuario e identifica: "
@@ -125,7 +139,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Historial de acciones:\\n{contexto}"},
+                {"role": "user", "content": f"Historial de acciones:\n{contexto}"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()
@@ -146,7 +160,7 @@ class PatternAnalyzer:
         partes = []
         for k, v in prefs.items():
             partes.append(f"{k} = {v}")
-        contexto = "\\n".join(partes[:MAX_PATTERN_CHARS])
+        contexto = "\n".join(partes[:MAX_PATTERN_CHARS])
 
         system_prompt = (
             "Eres un analista de preferencias. Analiza las preferencias guardadas del usuario e identifica: "
@@ -159,7 +173,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Preferencias del usuario:\\n{contexto}"},
+                {"role": "user", "content": f"Preferencias del usuario:\n{contexto}"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()
@@ -181,7 +195,7 @@ class PatternAnalyzer:
         for r in routines:
             estado = "confirmada" if r.get("confirmed") else "pendiente"
             partes.append(f"{r['name']} — {r.get('description', '')} [{estado}]")
-        contexto = "\\n".join(partes[:MAX_PATTERN_CHARS])
+        contexto = "\n".join(partes[:MAX_PATTERN_CHARS])
 
         system_prompt = (
             "Eres un analista de rutinas. Analiza las rutinas guardadas del usuario e identifica: "
@@ -194,7 +208,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Rutinas del usuario:\\n{contexto}"},
+                {"role": "user", "content": f"Rutinas del usuario:\n{contexto}"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()
@@ -223,7 +237,7 @@ class PatternAnalyzer:
             return True
 
         if len(content) > MAX_PATTERN_CHARS:
-            content = content[:MAX_PATTERN_CHARS] + "\\n... [truncado] ..."
+            content = content[:MAX_PATTERN_CHARS] + "\n... [truncado] ..."
 
         self.ui.print_system(f"Analizando patrones en {path.name} ({lang})...")
 
@@ -239,7 +253,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Archivo: {path.name}\\nLenguaje: {lang}\\nContenido:\\n```{lang}\\n{content}\\n```"},
+                {"role": "user", "content": f"Archivo: {path.name}\nLenguaje: {lang}\nContenido:\n```{lang}\n{content}\n```"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()
@@ -263,12 +277,12 @@ class PatternAnalyzer:
             for k, v in prefs.items():
                 partes.append(f"{k} = {v}")
         if routines:
-            partes.append("\\n=== RUTINAS ===")
+            partes.append("\n=== RUTINAS ===")
             for r in routines:
                 estado = "confirmada" if r.get("confirmed") else "pendiente"
                 partes.append(f"{r['name']} — {r.get('description', '')} [{estado}]")
         if audit:
-            partes.append("\\n=== ACCIONES RECIENTES ===")
+            partes.append("\n=== ACCIONES RECIENTES ===")
             for entry in audit[-15:]:
                 partes.append(f"{entry['time']} · {entry['action']} · {entry['detail']}")
 
@@ -276,7 +290,7 @@ class PatternAnalyzer:
             self.ui.print_warning("No hay suficientes datos para sugerir ideas. Guarda algunas preferencias o usa Abril un poco más.")
             return True
 
-        contexto = "\\n".join(partes[:MAX_PATTERN_CHARS])
+        contexto = "\n".join(partes[:MAX_PATTERN_CHARS])
 
         system_prompt = (
             "Eres un creador de ideas proactivo. Basándote en las preferencias, rutinas y acciones del usuario, "
@@ -290,7 +304,7 @@ class PatternAnalyzer:
         try:
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Conocimiento del usuario:\\n{contexto}"},
+                {"role": "user", "content": f"Conocimiento del usuario:\n{contexto}"},
             ]
             answer = self.chat.provider.complete(messages)
             self.ui.stop_typing()

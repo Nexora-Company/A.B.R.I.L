@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abril"
+dynamic = ["version"]
+description = "A.B.R.I.L — asistente personal local de Nexora para la terminal."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "PolyForm-Noncommercial-1.0.0" }
+authors = [{ name = "Nexora" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+ui = ["rich>=13.0"]
+voice = [
+    "faster-whisper>=1.0",
+    "piper-tts>=1.2",
+    "openwakeword>=0.6",
+]
+cloud = ["httpx>=0.27"]
+
+[project.scripts]
+abril = "main:main"
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["abril*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "abril.__version__" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+files = ["abril"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

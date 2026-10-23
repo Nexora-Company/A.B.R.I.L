@@ -31,13 +31,22 @@ def _read_env_file(path: Path) -> dict[str, str]:
         key = key.strip()
         if not separator or not key or not key.replace("_", "").isalnum():
             raise ValueError(f"Entrada inválida en {path.name}, línea {line_number}.")
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        elif " #" in value:
-            value = value.partition(" #")[0].rstrip()
-        values[key] = value
+        values[key] = _clean_value(value)
     return values
+
+
+def _clean_value(raw: str) -> str:
+    """Strip surrounding quotes and inline comments without touching quoted text."""
+    value = raw.strip()
+    if not value:
+        return value
+    if value[0] in {"'", '"'}:
+        closing = value.find(value[0], 1)
+        if closing != -1:
+            return value[1:closing]
+    if " #" in value:
+        value = value.partition(" #")[0].rstrip()
+    return value
 
 
 def _get(source: dict[str, str], key: str, default: str) -> str:
@@ -53,12 +62,28 @@ class Settings:
     max_history_messages: int = 30
     max_message_chars: int = 100_000
     data_dir: Path = PROJECT_ROOT / "data"
+    host: str = "127.0.0.1"
+    port: int = 8765
+
+    @property
+    def config_file(self) -> Path:
+        """Feature-flag file colocated with the rest of the local data."""
+        return self.data_dir / "config.json"
 
     @classmethod
     def load(cls, env_file: Path = DEFAULT_ENV_FILE) -> "Settings":
         values = {**_read_env_file(env_file), **os.environ}
+        raw_port = _get(values, "ABRIL_PORT", "8765")
+        try:
+            port = int(raw_port)
+        except ValueError as error:
+            raise ValueError("ABRIL_PORT debe ser un número entero.") from error
+        if not 1 <= port <= 65535:
+            raise ValueError("ABRIL_PORT debe estar entre 1 y 65535.")
         return cls(
             project_root=PROJECT_ROOT,
             ollama_url=_get(values, "OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
             ollama_model=_get(values, "OLLAMA_MODEL", "qwen2.5:3b"),
+            host=_get(values, "ABRIL_HOST", "127.0.0.1"),
+            port=port,
         )

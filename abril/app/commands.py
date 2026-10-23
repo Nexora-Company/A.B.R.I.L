@@ -1,0 +1,104 @@
+"""Incremental command registry for slash commands.
+
+Existing commands remain in ``main.py`` for now; new or extracted commands are
+registered here so the terminal loop can dispatch them without growing.
+"""
+
+from __future__ import annotations
+
+import shlex
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from .. import __version__
+from ..config import Settings
+from ..ui.protocol import UIPort
+from .flags import FeatureFlags
+
+
+@dataclass
+class CommandContext:
+    settings: Settings
+    flags: FeatureFlags
+    ui: UIPort
+
+
+Handler = Callable[[list[str], CommandContext], None]
+
+
+class CommandRegistry:
+    def __init__(self) -> None:
+        self._handlers: dict[str, Handler] = {}
+
+    def register(self, name: str, handler: Handler) -> None:
+        self._handlers[name.lower()] = handler
+
+    def handle(self, text: str, context: CommandContext) -> bool:
+        """Run the matching handler and return ``True`` when handled."""
+        if not text.startswith("/"):
+            return False
+        try:
+            parts = shlex.split(text)
+        except ValueError:
+            return False
+        if not parts:
+            return False
+        handler = self._handlers.get(parts[0].lower())
+        if handler is None:
+            return False
+        handler(parts[1:], context)
+        return True
+
+    @property
+    def names(self) -> list[str]:
+        return sorted(self._handlers)
+
+
+def _version(args: list[str], context: CommandContext) -> None:
+    context.ui.print_system(f"A.B.R.I.L {__version__} — Nexora")
+
+
+def _config(args: list[str], context: CommandContext) -> None:
+    flags = context.flags
+
+    if not args:
+        context.ui.print_system("Flags de A.B.R.I.L:")
+        for name in flags.names:
+            state = "on" if getattr(flags, name) else "off"
+            context.ui.print_system(f"  {name} = {state}")
+        context.ui.print_system(f"Archivo: {context.settings.config_file}")
+        return
+
+    action = args[0].lower()
+
+    if action == "reset":
+        flags.reset()
+        flags.save(context.settings.config_file)
+        context.ui.print_success("Flags restaurados a los valores por defecto.")
+        return
+
+    if action == "set":
+        if len(args) != 3:
+            context.ui.print_error("Uso: /config set <flag> <on|off>")
+            return
+        name, raw_value = args[1].lower(), args[2].lower()
+        if name not in flags.names:
+            context.ui.print_error(f"Flag desconocido: {name}. Disponibles: {', '.join(flags.names)}")
+            return
+        if raw_value not in {"on", "off"}:
+            context.ui.print_error("El valor debe ser 'on' u 'off'.")
+            return
+        flags.set(name, raw_value == "on")
+        flags.save(context.settings.config_file)
+        context.ui.print_success(f"{name} = {raw_value}")
+        return
+
+    context.ui.print_error("Uso: /config [set <flag> <on|off> | reset]")
+
+
+def build_command_registry() -> CommandRegistry:
+    registry = CommandRegistry()
+    registry.register("/version", _version)
+    registry.register("/config", _config)
+    registry.register("/flags", _config)
+    return registry

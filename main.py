@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
-import signal
 import subprocess
 import sys
 import threading
@@ -15,12 +13,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from abril.config import Settings, CREATOR_COMPANY, ASSISTANT_NAME
-from abril.providers.factory import create_provider
+from abril.app.bootstrap import build_core
+from abril.app.commands import CommandContext, build_command_registry
+from abril.config import ASSISTANT_NAME
 from abril.services.actions import ActionsService, ActionError
-from abril.services.pattern_analyzer import PatternAnalyzer
 from abril.services.chat import ChatService, InvalidConversation
-from abril.services.memory import MemoryService
+from abril.services.pattern_analyzer import PatternAnalyzer
+from abril.utils.language import detect_language
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -171,6 +170,8 @@ class TerminalUI:
   {Colors.BRIGHT_GREEN}/limpiar{Colors.RESET}     — Limpiar conversación
   {Colors.BRIGHT_GREEN}/estado{Colors.RESET}      — Estado del motor
   {Colors.BRIGHT_GREEN}/historial{Colors.RESET}   — Ver mensajes del historial cargado
+  {Colors.BRIGHT_GREEN}/version{Colors.RESET}     — Muestra la versión
+  {Colors.BRIGHT_GREEN}/config{Colors.RESET}      — Ver o cambiar flags (routing, policy…)
   {Colors.BRIGHT_GREEN}/programar <archivo>{Colors.RESET} — Revisar código con IA (leer, sugerir, aplicar)
   {Colors.BRIGHT_GREEN}/ejecutar <archivo>{Colors.RESET}   — Ejecutar archivo y corregir errores con IA
   {Colors.BRIGHT_GREEN}/revisar <archivo>{Colors.RESET}    — Revisar código y sugerir mejoras
@@ -279,56 +280,6 @@ APP_ALIASES = {
     "ajustes": ["settings", "control center", "gnome-control-center"],
     "captura": ["screenshot", "captura de pantalla"],
 }
-
-
-# Extensiones de archivo → nombre de lenguaje (para programación local)
-LANGUAGE_MAP = {
-    ".py": "python",
-    ".js": "javascript",
-    ".ts": "typescript",
-    ".jsx": "jsx",
-    ".tsx": "tsx",
-    ".html": "html",
-    ".css": "css",
-    ".sh": "bash",
-    ".bash": "bash",
-    ".zsh": "bash",
-    ".json": "json",
-    ".toml": "toml",
-    ".yaml": "yaml",
-    ".yml": "yaml",
-    ".md": "markdown",
-    ".txt": "text",
-    ".csv": "csv",
-    ".log": "log",
-    ".ini": "ini",
-    ".cfg": "ini",
-    ".conf": "conf",
-    ".c": "c",
-    ".cpp": "cpp",
-    ".h": "c",
-    ".hpp": "cpp",
-    ".rs": "rust",
-    ".go": "go",
-    ".java": "java",
-    ".rb": "ruby",
-    ".php": "php",
-    ".swift": "swift",
-    ".kt": "kotlin",
-    ".dart": "dart",
-    ".lua": "lua",
-    ".r": "r",
-    ".sql": "sql",
-    ".dockerfile": "dockerfile",
-    ".gitignore": "gitignore",
-    ".env": "env",
-}
-
-
-def detect_language(path: str) -> str:
-    """Detecta el lenguaje de programación por la extensión del archivo."""
-    ext = Path(path).suffix.lower()
-    return LANGUAGE_MAP.get(ext, "text")
 
 
 def resolve_app_id(actions: ActionsService, query: str) -> str | None:
@@ -853,7 +804,6 @@ class CodeAssistant:
     def _extract_code_block(answer: str, lang: str) -> str | None:
         """Extrae el primer bloque de código de la respuesta del modelo."""
         pattern = rf"```{lang}\n(.*?)\n```"
-        import re
         match = re.search(pattern, answer, re.DOTALL)
         if match:
             return match.group(1)
@@ -873,23 +823,28 @@ class CodeAssistant:
 
 def main() -> int:
     try:
-        settings = Settings.load()
+        core = build_core()
     except Exception as e:
         print(f"{Colors.RED}[error] Configuración inválida: {e}{Colors.RESET}")
         print("  Copia .env.example a .env y ajusta OLLAMA_URL / OLLAMA_MODEL")
         return 1
 
+    settings = core.settings
+    provider = core.provider
+    chat = core.chat
+    actions = core.actions
+    memory = core.memory
+    flags = core.flags
+
     ui = TerminalUI()
     ui.clear()
     ui.print_banner()
 
-    provider = create_provider(settings)
-    chat = ChatService(provider, settings)
-    actions = ActionsService(settings, chat)
-    memory = MemoryService(settings, actions)
     direct = DirectCommands(ui, actions)
     code = CodeAssistant(ui, chat, actions)
     pattern = PatternAnalyzer(ui, chat, memory, actions)
+    commands = build_command_registry()
+    command_context = CommandContext(settings=settings, flags=flags, ui=ui)
 
     # Fase A: cargar historial persistente
     history: list[dict[str, str]] = load_chat_history(settings.data_dir)
@@ -930,6 +885,12 @@ def main() -> int:
         if user_input.startswith("/"):
             # Comandos de programación (Fase B)
             if code.handle(user_input):
+                continue
+            # Análisis de patrones, ideas y pensamiento profundo (Fase C)
+            if pattern.handle(user_input):
+                continue
+            # Comandos extraídos (Fase 0: /version, /config)
+            if commands.handle(user_input, command_context):
                 continue
             if user_input == "/ayuda":
                 ui.print_help()

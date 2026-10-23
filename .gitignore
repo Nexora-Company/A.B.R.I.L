@@ -43,3 +43,4 @@ data/
 dist/
 build/
 *.spec
+*.egg-info/

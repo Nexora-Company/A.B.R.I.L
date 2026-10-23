@@ -6,6 +6,15 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 
 ### Añadido
 
+- Fase 0: fundación del proyecto (`pyproject.toml`, tests, CI, flags y bootstrap).
+- Comandos `/version` y `/config` para consultar y cambiar flags en caliente.
+- Pruebas con proveedor falso que no requieren Ollama.
+- ADRs iniciales en `docs/adr/`.
+
+### Cambiado
+
+- `main.py` construye los servicios mediante `abril.app.bootstrap`.
+- `Settings` lee `ABRIL_HOST` y `ABRIL_PORT` (reservados para modos futuros).
 - Analizador de patrones y sugeridor de ideas (Fase C).
 - Asistente de programación local (Fase B).
 - Contexto persistente entre sesiones (Fase A).
@@ -13,12 +22,10 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 - 7 tipos de acción con confirmación: open, search, summarize, execute, read, write, list.
 - Identidad inmutable (Nexora/Santiago) y personalidad fija.
 
-### Cambiado
+### Corregido
 
-- Proyecto renombrado a A.B.R.I.L como producto de Nexora.
-- Proveedor OpenAI eliminado; modo solo terminal.
-- Layout de terminal conservador; comandos directos sin IA.
-- Paneles de Acciones y Memoria eliminados; modal de configuración.
+- `pattern_analyzer` ahora importa sus dependencias; `/analizar`, `/ideas` y `/pensar` se despachan correctamente.
+- El lector de `.env` maneja comillas con comentarios en línea.
 
 ### Eliminado
 
