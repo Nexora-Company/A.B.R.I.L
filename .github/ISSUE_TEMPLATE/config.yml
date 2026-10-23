@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Saaarmyx/Saaarmyx/security/advisories/new
+    about: Report a security vulnerability privately
+  - name: Discussions
+    url: https://github.com/Saaarmyx/Saaarmyx/discussions
+    about: Ask questions and discuss design

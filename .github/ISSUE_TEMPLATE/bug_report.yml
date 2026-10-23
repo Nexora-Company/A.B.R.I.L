@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a bug in A.B.R.I.L
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`python3 -c 'import abril; print(abril.__version__)'` or commit hash"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: "`python3 --version`"
+  - type: input
+    id: os
+    attributes:
+      label: OS
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: "OLLAMA_MODEL value"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (no secrets)
