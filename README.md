@@ -105,8 +105,6 @@ Permite uso, modificación y distribución no comercial. No permite uso comercia
 
 Nexora es titular de la marca: el nombre y el logo de Nexora (y de A.B.R.I.L) no pueden usarse sin autorización.
 
-<!-- TODO: update after license change -->
-
 ## Pie
 
 Un proyecto de Nexora.
