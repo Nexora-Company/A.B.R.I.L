@@ -107,7 +107,7 @@ Los flags de funcionalidad viven en `data/config.json` y se pueden consultar o c
 - [x] `pyproject.toml` con extras opcionales.
 - [x] CI (lint, tipos y tests).
 - [x] Lectura de `ABRIL_HOST`/`ABRIL_PORT` (reservados para modos futuros).
-- [ ] Fase 1: router de tres carriles, perfiles de hardware, permisos por niveles y memoria SQLite.
+- [x] Fase 1: router de tres carriles, perfiles de hardware, permisos por niveles, privacidad, memoria SQLite y protocolos NEXO-BRACE/NEXUS-LOCK.
 - [ ] Fase 2: tareas en segundo plano, varios modelos, búsqueda web y proveedores externos.
 - [ ] Fase 3: voz local, protocolos, proactividad, integraciones y HUD.
 

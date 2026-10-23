@@ -7,6 +7,11 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 ### Añadido
 
 - Fase 0: fundación del proyecto (`pyproject.toml`, tests, CI, flags y bootstrap).
+- Fase 1: router de tres carriles, perfiles de hardware y optimización CPU.
+- Motor de políticas por niveles, privacidad `local-strict` y manejo de contenido no confiable.
+- Plantillas de personalidad opcionales y motor predictivo de alias.
+- Memoria persistente en SQLite con migración desde los JSON históricos.
+- Protocolo NEXO-BRACE para limitar capacidades y NEXUS-LOCK para domótica.
 - Comandos `/version` y `/config` para consultar y cambiar flags en caliente.
 - Pruebas con proveedor falso que no requieren Ollama.
 - ADRs iniciales en `docs/adr/`.
@@ -26,6 +31,8 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 
 - `pattern_analyzer` ahora importa sus dependencias; `/analizar`, `/ideas` y `/pensar` se despachan correctamente.
 - El lector de `.env` maneja comillas con comentarios en línea.
+- La migración de JSON a SQLite se ejecuta una sola vez y no duplica historial ni auditoría.
+- Timestamps UTC sin la API obsoleta `datetime.utcnow()`.
 
 ### Eliminado
 
