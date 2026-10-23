@@ -81,7 +81,10 @@ TIPS = [
 
     "Escribe '/ayuda' para obtener mas informacion.",
     "Escribe codigo, preguntas o comandos y te ayudare a resolverlos.",
-    "Se especifico para mejores resultados."
+    "Se especifico para mejores resultados.",
+    "Usa '/programar <archivo>' para revisar y mejorar codigo con IA.",
+    "Usa '/ejecutar <archivo>' para correr un programa y corregir errores automaticamente.",
+    "Usa '/revisar <archivo>' para obtener un analisis de codigo detallado.",
 ]
 
 
@@ -167,6 +170,9 @@ class TerminalUI:
   {Colors.BRIGHT_GREEN}/limpiar{Colors.RESET}     — Limpiar conversación
   {Colors.BRIGHT_GREEN}/estado{Colors.RESET}      — Estado del motor
   {Colors.BRIGHT_GREEN}/historial{Colors.RESET}   — Ver mensajes del historial cargado
+  {Colors.BRIGHT_GREEN}/programar <archivo>{Colors.RESET} — Revisar código con IA (leer, sugerir, aplicar)
+  {Colors.BRIGHT_GREEN}/ejecutar <archivo>{Colors.RESET}   — Ejecutar archivo y corregir errores con IA
+  {Colors.BRIGHT_GREEN}/revisar <archivo>{Colors.RESET}    — Revisar código y sugerir mejoras
 
 {Colors.DIM}Todo lo demás se envía al modelo local para responder.{Colors.RESET}
 """)
@@ -269,6 +275,56 @@ APP_ALIASES = {
     "ajustes": ["settings", "control center", "gnome-control-center"],
     "captura": ["screenshot", "captura de pantalla"],
 }
+
+
+# Extensiones de archivo → nombre de lenguaje (para programación local)
+LANGUAGE_MAP = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".jsx": "jsx",
+    ".tsx": "tsx",
+    ".html": "html",
+    ".css": "css",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".json": "json",
+    ".toml": "toml",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".md": "markdown",
+    ".txt": "text",
+    ".csv": "csv",
+    ".log": "log",
+    ".ini": "ini",
+    ".cfg": "ini",
+    ".conf": "conf",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".h": "c",
+    ".hpp": "cpp",
+    ".rs": "rust",
+    ".go": "go",
+    ".java": "java",
+    ".rb": "ruby",
+    ".php": "php",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".dart": "dart",
+    ".lua": "lua",
+    ".r": "r",
+    ".sql": "sql",
+    ".dockerfile": "dockerfile",
+    ".gitignore": "gitignore",
+    ".env": "env",
+}
+
+
+def detect_language(path: str) -> str:
+    """Detecta el lenguaje de programación por la extensión del archivo."""
+    ext = Path(path).suffix.lower()
+    return LANGUAGE_MAP.get(ext, "text")
 
 
 def resolve_app_id(actions: ActionsService, query: str) -> str | None:
@@ -470,6 +526,343 @@ class DirectCommands:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  ASISTENTE DE PROGRAMACIÓN LOCAL (Fase B)
+# ═════════════════════════════════════════════════════════════════════════════
+
+MAX_CODE_CHARS = 60_000  # límite de caracteres para enviar al modelo
+
+
+class CodeAssistant:
+    """Asistente de programación local: leer, revisar, escribir y ejecutar código."""
+
+    def __init__(self, ui: TerminalUI, chat: ChatService, actions: ActionsService) -> None:
+        self.ui = ui
+        self.chat = chat
+        self.actions = actions
+        self.history: list[dict[str, str]] = []
+
+    # ---------------------------------------------------------------- #
+    #  Comandos de programación
+    # ---------------------------------------------------------------- #
+    def handle(self, user_input: str) -> bool:
+        """Devuelve True si el comando de programación fue manejado."""
+        text = user_input.strip()
+        if not text:
+            return False
+
+        parts = shlex.split(text)
+        if not parts:
+            return False
+        cmd = parts[0].lower()
+
+        if cmd == "/programar":
+            return self._cmd_programar(parts[1:])
+        if cmd == "/code":
+            return self._cmd_programar(parts[1:])
+        if cmd == "/ejecutar":
+            return self._cmd_ejecutar(parts[1:])
+        if cmd == "/run":
+            return self._cmd_ejecutar(parts[1:])
+        if cmd == "/revisar":
+            return self._cmd_revisar(parts[1:])
+        if cmd == "/review":
+            return self._cmd_revisar(parts[1:])
+        return False
+
+    # ── programar / code ──
+    def _cmd_programar(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: /programar <archivo>")
+            return True
+        path_str = args[0]
+        path = Path(path_str).expanduser().resolve()
+
+        if not path.exists():
+            self.ui.print_error(f"El archivo no existe: {path}")
+            return True
+        if not path.is_file():
+            self.ui.print_error(f"No es un archivo: {path}")
+            return True
+
+        lang = detect_language(str(path))
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            self.ui.print_error(f"No se pudo leer el archivo: {e}")
+            return True
+
+        if len(content) > MAX_CODE_CHARS:
+            self.ui.print_warning(f"El archivo es muy grande ({len(content)} chars). Se truncará a {MAX_CODE_CHARS}.")
+            content = content[:MAX_CODE_CHARS] + "\n... [truncado] ..."
+
+        self.ui.print_system(f"Leyendo {path.name} ({lang}, {len(content)} chars)...")
+
+        # Enviar al modelo para revisión
+        system_prompt = (
+            f"Eres un programador experto en {lang}. Revisa el siguiente código y: "
+            "1) Identifica bugs, problemas de seguridad y malas prácticas. "
+            "2) Sugiere mejoras concretas y explicables. "
+            "3) Si hay errores, propón una versión corregida completa. "
+            "Responde en español, de forma clara y constructiva. "
+            "No ejecutes código, solo analiza y sugiere."
+        )
+
+        self.history.append({"role": "user", "content": f"Archivo: {path.name}\nLenguaje: {lang}\nContenido:\n```{lang}\n{content}\n```"})
+
+        self.ui.start_typing()
+        try:
+            # Usar el system prompt del chat service + historial
+            messages = [{"role": "system", "content": system_prompt}, *self.history[-10:]]
+            answer = self.chat.provider.complete(messages)
+            self.ui.stop_typing()
+        except Exception as e:
+            self.ui.stop_typing()
+            self.ui.print_error(f"Error del modelo: {e}")
+            self.history.pop()
+            return True
+
+        self.history.append({"role": "assistant", "content": answer})
+        self.ui.print_assistant(answer)
+
+        # Preguntar si aplicar cambios
+        resp = input(f"  {Colors.CYAN}¿Aplicar cambios sugeridos al archivo? [s/N]:{Colors.RESET} ").strip().lower()
+        if resp in {"s", "si", "sí", "y", "yes"}:
+            # Extraer bloque de código de la respuesta si lo hay
+            new_content = self._extract_code_block(answer, lang)
+            if new_content:
+                try:
+                    path.write_text(new_content, encoding="utf-8")
+                    self.ui.print_success(f"Archivo actualizado: {path}")
+                except OSError as e:
+                    self.ui.print_error(f"No se pudo escribir: {e}")
+            else:
+                self.ui.print_warning("No se detectó un bloque de código para aplicar.")
+        return True
+
+    # ── ejecutar / run ──
+    def _cmd_ejecutar(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: /ejecutar <archivo>")
+            return True
+        path_str = args[0]
+        path = Path(path_str).expanduser().resolve()
+
+        if not path.exists():
+            self.ui.print_error(f"El archivo no existe: {path}")
+            return True
+        if not path.is_file():
+            self.ui.print_error(f"No es un archivo: {path}")
+            return True
+
+        lang = detect_language(str(path))
+
+        # Determinar cómo ejecutar según el lenguaje
+        if lang == "python":
+            cmd = ["python3", str(path)]
+        elif lang == "bash":
+            cmd = ["bash", str(path)]
+        elif lang == "javascript":
+            cmd = ["node", str(path)]
+        else:
+            self.ui.print_error(f"No sé cómo ejecutar archivos .{path.suffix} directamente.")
+            self.ui.print_system("Lenguajes soportados para ejecución directa: .py, .sh, .js")
+            return True
+
+        self.ui.print_system(f"Ejecutando: {' '.join(cmd)}")
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+        except subprocess.TimeoutExpired:
+            self.ui.print_error("Tiempo de espera agotado (60s).")
+            return True
+        except FileNotFoundError:
+            self.ui.print_error(f"Comando no encontrado: {cmd[0]}")
+            return True
+        except OSError as e:
+            self.ui.print_error(f"Error ejecutando: {e}")
+            return True
+
+        output = result.stdout
+        if result.stderr:
+            output += f"\n[stderr]\n{result.stderr}"
+        if result.returncode != 0:
+            output += f"\n[exit code: {result.returncode}]"
+
+        if len(output) > 5000:
+            output = output[:5000] + "\n... [truncado] ..."
+
+        if output.strip():
+            self.ui.print_system("Salida del programa:")
+            print(output)
+        else:
+            self.ui.print_system("(sin salida)")
+
+        if result.returncode != 0:
+            self.ui.print_warning("El programa terminó con errores.")
+            # Preguntar si quiere que Abril los arregle
+            resp = input(f"  {Colors.CYAN}¿Pedirle a Abril que arregle los errores? [s/N]:{Colors.RESET} ").strip().lower()
+            if resp in {"s", "si", "sí", "y", "yes"}:
+                self._fix_errors(path, lang, output)
+        else:
+            self.ui.print_success("Programa ejecutado correctamente.")
+        return True
+
+    def _fix_errors(self, path: Path, lang: str, error_output: str) -> None:
+        """Pide al modelo que arregle los errores del código."""
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            self.ui.print_error(f"No se pudo leer el archivo: {e}")
+            return
+
+        if len(content) > MAX_CODE_CHARS:
+            content = content[:MAX_CODE_CHARS] + "\n... [truncado] ..."
+
+        system_prompt = (
+            f"Eres un programador experto en {lang}. El siguiente código falló al ejecutarse. "
+            "Analiza el error, identifica la causa raíz y propón una versión corregida COMPLETA del archivo. "
+            "Responde SOLO con el código corregido en un bloque ```{lang}```. "
+            "No añadas explicaciones adicionales fuera del bloque de código."
+        )
+
+        self.history.append({"role": "user", "content": f"Archivo: {path.name}\nLenguaje: {lang}\nCódigo actual:\n```{lang}\n{content}\n```\n\nError de ejecución:\n```\n{error_output}\n```\n\nPor favor, corrige el código."})
+
+        self.ui.start_typing()
+        try:
+            messages = [{"role": "system", "content": system_prompt}, *self.history[-10:]]
+            answer = self.chat.provider.complete(messages)
+            self.ui.stop_typing()
+        except Exception as e:
+            self.ui.stop_typing()
+            self.ui.print_error(f"Error del modelo: {e}")
+            self.history.pop()
+            return
+
+        self.history.append({"role": "assistant", "content": answer})
+        new_content = self._extract_code_block(answer, lang)
+        if new_content:
+            try:
+                path.write_text(new_content, encoding="utf-8")
+                self.ui.print_success(f"Archivo corregido: {path}")
+                # Volver a ejecutar
+                self.ui.print_system("Volviendo a ejecutar el archivo corregido...")
+                self._re_run(path, lang)
+            except OSError as e:
+                self.ui.print_error(f"No se pudo escribir: {e}")
+        else:
+            self.ui.print_warning("No se detectó un bloque de código corregido.")
+
+    def _re_run(self, path: Path, lang: str) -> None:
+        """Vuelve a ejecutar un archivo después de corregirlo."""
+        if lang == "python":
+            cmd = ["python3", str(path)]
+        elif lang == "bash":
+            cmd = ["bash", str(path)]
+        elif lang == "javascript":
+            cmd = ["node", str(path)]
+        else:
+            return
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+        except subprocess.TimeoutExpired:
+            self.ui.print_error("Tiempo de espera agotado (60s).")
+            return
+        except (FileNotFoundError, OSError) as e:
+            self.ui.print_error(f"Error ejecutando: {e}")
+            return
+
+        output = result.stdout
+        if result.stderr:
+            output += f"\n[stderr]\n{result.stderr}"
+        if result.returncode != 0:
+            output += f"\n[exit code: {result.returncode}]"
+
+        if len(output) > 5000:
+            output = output[:5000] + "\n... [truncado] ..."
+
+        if output.strip():
+            self.ui.print_system("Salida del programa:")
+            print(output)
+        else:
+            self.ui.print_system("(sin salida)")
+
+        if result.returncode != 0:
+            self.ui.print_warning("El programa aún tiene errores.")
+        else:
+            self.ui.print_success("Programa ejecutado correctamente.")
+
+    # ── revisar / review ──
+    def _cmd_revisar(self, args: list[str]) -> bool:
+        if not args:
+            self.ui.print_error("Uso: /revisar <archivo>")
+            return True
+        path_str = args[0]
+        path = Path(path_str).expanduser().resolve()
+
+        if not path.exists():
+            self.ui.print_error(f"El archivo no existe: {path}")
+            return True
+        if not path.is_file():
+            self.ui.print_error(f"No es un archivo: {path}")
+            return True
+
+        lang = detect_language(str(path))
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            self.ui.print_error(f"No se pudo leer el archivo: {e}")
+            return True
+
+        if len(content) > MAX_CODE_CHARS:
+            content = content[:MAX_CODE_CHARS] + "\n... [truncado] ..."
+
+        self.ui.print_system(f"Revisando {path.name} ({lang})...")
+
+        system_prompt = (
+            f"Eres un programador experto en {lang}. Analiza el siguiente código y: "
+            "1) Identifica bugs, problemas de seguridad, malas prácticas y cuellos de botella. "
+            "2) Sugiere mejoras concretas con ejemplos de código. "
+            "3) Señala qué está bien y qué podría mejorarse. "
+            "Responde en español, de forma clara y constructiva."
+        )
+
+        self.history.append({"role": "user", "content": f"Archivo: {path.name}\nLenguaje: {lang}\nContenido:\n```{lang}\n{content}\n```"})
+
+        self.ui.start_typing()
+        try:
+            messages = [{"role": "system", "content": system_prompt}, *self.history[-10:]]
+            answer = self.chat.provider.complete(messages)
+            self.ui.stop_typing()
+        except Exception as e:
+            self.ui.stop_typing()
+            self.ui.print_error(f"Error del modelo: {e}")
+            self.history.pop()
+            return True
+
+        self.history.append({"role": "assistant", "content": answer})
+        self.ui.print_assistant(answer)
+        return True
+
+    # ── helpers internos ──
+    @staticmethod
+    def _extract_code_block(answer: str, lang: str) -> str | None:
+        """Extrae el primer bloque de código de la respuesta del modelo."""
+        pattern = rf"```{lang}\n(.*?)\n```"
+        import re
+        match = re.search(pattern, answer, re.DOTALL)
+        if match:
+            return match.group(1)
+        # Intentar con cualquier bloque de código
+        pattern2 = r"```\n(.*?)\n```"
+        match2 = re.search(pattern2, answer, re.DOTALL)
+        if match2:
+            return match2.group(1)
+        return None
+
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  APLICACIÓN PRINCIPAL
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -491,6 +884,7 @@ def main() -> int:
     actions = ActionsService(settings, chat)
     memory = MemoryService(settings, actions)
     direct = DirectCommands(ui, actions)
+    code = CodeAssistant(ui, chat, actions)
 
     # Fase A: cargar historial persistente
     history: list[dict[str, str]] = load_chat_history(settings.data_dir)
@@ -529,6 +923,9 @@ def main() -> int:
 
         # Comandos del sistema (con /)
         if user_input.startswith("/"):
+            # Comandos de programación (Fase B)
+            if code.handle(user_input):
+                continue
             if user_input == "/ayuda":
                 ui.print_help()
                 continue
