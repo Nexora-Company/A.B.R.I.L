@@ -140,6 +140,16 @@ class NEXOBrace:
     def refresh(self) -> None:
         self._state = self._compute_state()
 
+    def set_user_consent(self, consent: bool) -> None:
+        """Otorga o revoca el consentimiento explícito del usuario."""
+        self.user_consent = consent
+        self.refresh()
+
+    def set_nexus_locked(self, locked: bool) -> None:
+        """Sincroniza el estado global de NEXUS-LOCK con NEXO-BRACE."""
+        self.nexus_locked = locked
+        self.refresh()
+
     def is_unlocked(self, capability: str) -> bool:
         """Verifica si una capacidad está desbloqueada en el estado actual."""
         gate = _CAPABILITIES.get(capability)

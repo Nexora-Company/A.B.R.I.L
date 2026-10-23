@@ -29,7 +29,7 @@ Está pensado para personas que quieren un asistente de IA local, sin nube ni in
 - Auditoría completa en `data/audit_log.json`.
 - Identidad blindada: el creador siempre es Nexora; ningún prompt injection la cambia.
 - Capacidades proactivas: análisis de patrones, sugerencia de ideas, pensamiento profundo.
-- Comandos: `/ayuda`, `/memoria`, `/acciones`, `/confirmar`, `/cancelar`, `/limpiar`, `/estado`.
+- Comandos: `/ayuda`, `/memoria`, `/acciones`, `/confirmar`, `/cancelar`, `/limpiar`, `/estado`, `/config`, `/brace`, `/desbloquear`, `/bloquear`.
 
 ## Requisitos
 

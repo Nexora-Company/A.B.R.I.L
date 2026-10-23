@@ -172,6 +172,9 @@ class TerminalUI:
   {Colors.BRIGHT_GREEN}/historial{Colors.RESET}   — Ver mensajes del historial cargado
   {Colors.BRIGHT_GREEN}/version{Colors.RESET}     — Muestra la versión
   {Colors.BRIGHT_GREEN}/config{Colors.RESET}      — Ver o cambiar flags (routing, policy…)
+  {Colors.BRIGHT_GREEN}/brace{Colors.RESET}       — Ver estado y capacidades de NEXO-BRACE
+  {Colors.BRIGHT_GREEN}/desbloquear{Colors.RESET} — Otorgar consentimiento (requiere confirmar)
+  {Colors.BRIGHT_GREEN}/bloquear{Colors.RESET}    — Revocar consentimiento y bloquear accesos
   {Colors.BRIGHT_GREEN}/programar <archivo>{Colors.RESET} — Revisar código con IA (leer, sugerir, aplicar)
   {Colors.BRIGHT_GREEN}/ejecutar <archivo>{Colors.RESET}   — Ejecutar archivo y corregir errores con IA
   {Colors.BRIGHT_GREEN}/revisar <archivo>{Colors.RESET}    — Revisar código y sugerir mejoras
@@ -844,7 +847,13 @@ def main() -> int:
     code = CodeAssistant(ui, chat, actions)
     pattern = PatternAnalyzer(ui, chat, memory, actions)
     commands = build_command_registry()
-    command_context = CommandContext(settings=settings, flags=flags, ui=ui)
+    command_context = CommandContext(
+        settings=settings,
+        flags=flags,
+        ui=ui,
+        nexo_brace=core.nexo_brace,
+        nexus_lock=core.nexus_lock,
+    )
 
     # Fase A: cargar historial persistente
     history: list[dict[str, str]] = load_chat_history(settings.data_dir)

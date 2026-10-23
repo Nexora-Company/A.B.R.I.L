@@ -12,6 +12,8 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 - Plantillas de personalidad opcionales y motor predictivo de alias.
 - Memoria persistente en SQLite con migración desde los JSON históricos.
 - Protocolo NEXO-BRACE para limitar capacidades y NEXUS-LOCK para domótica.
+- Comandos `/brace`, `/desbloquear` (con confirmación) y `/bloquear`.
+- Selección de modelos ligero/pesado según el tier de hardware.
 - Comandos `/version` y `/config` para consultar y cambiar flags en caliente.
 - Pruebas con proveedor falso que no requieren Ollama.
 - ADRs iniciales en `docs/adr/`.

@@ -115,3 +115,22 @@ def test_nexo_brace_hardware_tier_blocks_low():
         user_consent=False,
     )
     assert brace.is_unlocked("policy") is True
+
+
+def test_nexo_brace_set_user_consent_refreshes_state():
+    brace = build_nexo_brace(hardware_tier="mid", flags={}, nexus_locked=True)
+    assert brace.state == NEXOBraceState.LOCKED
+
+    brace.set_user_consent(True)
+    assert brace.state == NEXOBraceState.PARTIAL
+
+    brace.set_user_consent(False)
+    assert brace.state == NEXOBraceState.LOCKED
+
+
+def test_nexo_brace_set_nexus_locked_refreshes_state():
+    brace = build_nexo_brace(hardware_tier="mid", flags={}, nexus_locked=True, user_consent=True)
+    assert brace.state == NEXOBraceState.PARTIAL
+
+    brace.set_nexus_locked(False)
+    assert brace.state == NEXOBraceState.FULL
