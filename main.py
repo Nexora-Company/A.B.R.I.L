@@ -18,6 +18,7 @@ from typing import Any
 from abril.config import Settings, CREATOR_COMPANY, ASSISTANT_NAME
 from abril.providers.factory import create_provider
 from abril.services.actions import ActionsService, ActionError
+from abril.services.pattern_analyzer import PatternAnalyzer
 from abril.services.chat import ChatService, InvalidConversation
 from abril.services.memory import MemoryService
 
@@ -173,6 +174,9 @@ class TerminalUI:
   {Colors.BRIGHT_GREEN}/programar <archivo>{Colors.RESET} — Revisar código con IA (leer, sugerir, aplicar)
   {Colors.BRIGHT_GREEN}/ejecutar <archivo>{Colors.RESET}   — Ejecutar archivo y corregir errores con IA
   {Colors.BRIGHT_GREEN}/revisar <archivo>{Colors.RESET}    — Revisar código y sugerir mejoras
+  {Colors.BRIGHT_GREEN}/analizar [qué]{Colors.RESET}       — Analiza patrones (acciones, memoria, rutinas o archivo)
+  {Colors.BRIGHT_GREEN}/ideas{Colors.RESET}                — Sugiere ideas basadas en tus preferencias y rutinas
+  {Colors.BRIGHT_GREEN}/pensar <tema>{Colors.RESET}        — Modo reflexivo: piensa profundamente sobre un tema
 
 {Colors.DIM}Todo lo demás se envía al modelo local para responder.{Colors.RESET}
 """)
@@ -885,6 +889,7 @@ def main() -> int:
     memory = MemoryService(settings, actions)
     direct = DirectCommands(ui, actions)
     code = CodeAssistant(ui, chat, actions)
+    pattern = PatternAnalyzer(ui, chat, memory, actions)
 
     # Fase A: cargar historial persistente
     history: list[dict[str, str]] = load_chat_history(settings.data_dir)

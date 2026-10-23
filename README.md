@@ -5,7 +5,7 @@
 > Creado por **Nexora** — datos inmutables.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-Apache_2.0-D22128?logo=apache&logoColor=white)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Activo-22C55E)]()
 
 ---
@@ -177,7 +177,7 @@ Sin dependencias externas — todo stdlib.
 A.B.R.I.L/
 ├── .env.example          # Plantilla de configuración
 ├── .gitignore
-├── LICENSE               # Apache-2.0
+├── LICENSE               # AGPL-3.0
 ├── README.md             # Este archivo
 ├── CONTRIBUTING.md       # Guía de contribución
 ├── main.py               # Entrypoint principal (terminal)
@@ -212,9 +212,9 @@ Lee `CONTRIBUTING.md` para:
 
 ## Licencia
 
-Apache-2.0 — Ver `LICENSE`.
+AGPL-3.0 — Ver `LICENSE`.
 
-Copyright (c) 2026 Nexora (Saaarmyx)
+Copyright (c) 2026 Nexora (Santiago Sarmiento / Saaarmyx)
 
 ---
 
