@@ -1,67 +1,64 @@
-# Contributing to A.B.R.I.L
+# Contribuir a A.B.R.I.L
 
-Thanks for wanting to improve A.B.R.I.L. This document covers workflow, standards and rules.
+Bienvenido. El código es visible y las contribuciones son bienvenidas.
 
-## Reporting bugs and proposing features
+## Antes de empezar
 
-- Search existing issues first.
-- For large changes, open an issue before coding.
-- Bugs: include version (`abril/__init__.py`), Python version, OS, provider/model, minimal reproduction, expected vs. actual, relevant logs (no API keys).
+Abre un issue para discutir cambios grandes antes de implementarlos.
 
-## Development environment
+## Flujo de trabajo
 
-Detected from the repo: no `pyproject.toml` or `requirements.txt` (stdlib only).
+1. Fork del repositorio.
+2. Crea una rama: `feat/`, `fix/`, `docs/`.
+3. Commits con Conventional Commits.
+4. Abre un Pull Request.
 
-- Minimum gate: `python3 -m py_compile main.py abril/**/*.py`
-- Optional: `mypy` (`python3 -m mypy main.py abril/`), `ruff` (`ruff check`, `ruff format`).
-- Style: 4 spaces, 88 columns, absolute imports from `abril.`, Google-style docstrings.
+## Entorno de desarrollo
 
-`{{TODO: add a pyproject.toml or requirements-dev.txt to pin tooling}}`
+Comandos reales del repositorio (no hay manifiesto de dependencias: solo stdlib de Python):
 
-## Code style
-
-- Type hints on all public functions.
-- `@dataclass(frozen=True)` for immutable settings/DTOs.
-- `typing.Protocol` for interfaces (providers).
-- Stdlib first: no external dependencies without discussion.
-- Specific exceptions; chain with `raise ... from err`.
-
-## Commit convention
-
-Conventional Commits. Scopes: `providers`, `services`, `config`, `chat`, `terminal`, `memory`, `actions`.
-
-```text
-feat(providers): add Anthropic provider
-fix(chat): avoid index error when truncating history
+```sh
+python3 -m py_compile main.py abril/**/*.py
+python3 -m mypy main.py abril/        # opcional
+ruff check main.py abril/             # opcional
+ruff format --check main.py abril/    # opcional
 ```
 
-Rules: one logical change per commit; explicit paths (no `git add .`); imperative, lowercase, max 72 chars first line; Spanish messages.
+## Estándares de código
 
-## Branch and PR flow
+- Python 3.10+.
+- Formato: `ruff format` (88 columnas).
+- Lint: `ruff check`.
+- Tipado: type hints en funciones públicas; `mypy --strict` opcional.
+- Imports absolutos desde `abril.`; orden stdlib → third-party → local.
+- Docstrings estilo Google en módulos, clases y funciones públicas.
+- Sin dependencias externas sin discusión previa.
 
-Branches: `feature/`, `fix/`, `refactor/`, `docs/`, `style/`, `build/`, `ci/`, `test/` + kebab-case.
+## Checklist del Pull Request
 
-PR must include: Conventional Commits title, description (what/why/how tested), issue reference, checklist.
+- [ ] `main` actualizado y rebaseado/mergeado.
+- [ ] Commits atómicos + Conventional Commits.
+- [ ] `python3 -m py_compile main.py abril/**/*.py` pasa.
+- [ ] `mypy` y `ruff` pasan (si se usan).
+- [ ] Docstrings actualizadas.
+- [ ] README actualizado si cambia configuración, uso o arquitectura.
+- [ ] Sin `.env`, `__pycache__`, `*.pyc`, logs en el diff.
+- [ ] PR explica qué y por qué.
 
-## PR checklist
+## Proceso de revisión
 
-- [ ] `main` updated and rebased/merged
-- [ ] Atomic commits + Conventional Commits
-- [ ] `python3 -m py_compile main.py abril/**/*.py` passes
-- [ ] `mypy` and `ruff` pass (if used)
-- [ ] Docstrings updated (Google style)
-- [ ] README updated if config/usage/architecture changed
-- [ ] No `.env`, `__pycache__`, `*.pyc`, logs in diff
-- [ ] PR explains what and why
+El mantenedor revisa los PRs. Espera comentarios y solicitudes de cambio antes de la fusión.
 
-## CLA
+## Acuerdo de contribución (CLA)
 
-Contributors must sign the CLA before a PR is accepted. This grants Nexora the rights needed to offer the commercial license alongside the AGPL edition.
+Al enviar una contribución, la persona declara que es autora o tiene derecho a aportarla y concede a Nexora una licencia perpetua, mundial, no exclusiva, gratuita e irrevocable para usar, modificar, sublicenciar, relicenciar y comercializar la contribución, incluso bajo otras licencias.
 
-## AI-generated code
+<!-- TODO: revisión legal del texto del CLA -->
 
-Allowed if the contributor understands, reviews and takes responsibility for it.
+## Código de conducta
 
-## Questions
+Reglas breves de respeto y convivencia: trato respetuoso, sin acoso, sin ataques personales. Los conflictos se resuelven con diálogo.
 
-Use GitHub Discussions for design/architecture. Discord `saaarmyx` or @saaarmyx on GitHub for quick questions.
+## Licencia
+
+Las contribuciones quedan bajo **PolyForm Noncommercial 1.0.0**, sujetas al acuerdo anterior.

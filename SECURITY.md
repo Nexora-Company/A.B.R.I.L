@@ -1,53 +1,39 @@
-# Security Policy
+# Seguridad
 
-## Reporting a vulnerability
+## Versiones soportadas
 
-Report vulnerabilities privately using GitHub's [Private Vulnerability Reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) for this repository. Do not open a public issue.
-
-Alternative: contact {{CONTACT_EMAIL}}.
-
-## Supported versions
-
-| Version | Supported |
+| Versión | Soportada |
 |---------|-----------|
-| 0.2.x   | `{{TODO: confirm}}` |
-| < 0.2   | No |
+| 0.2.x   | Sí        |
+| < 0.2   | No        |
 
-## What to include
+## Cómo reportar una vulnerabilidad
 
-- Affected version or commit
-- Steps to reproduce
-- Impact assessment
-- Suggested fix (optional)
+Usa el reporte privado de GitHub: pestaña **Security → "Report a vulnerability"**. Prohibido reportar en issues públicos.
 
-## What to expect
+## Qué incluir en el reporte
 
-- Acknowledgement within `{{TODO: set SLA}}`
-- Status updates every `{{TODO: set cadence}}`
-- Coordinated disclosure after a fix is available
+- Descripción de la vulnerabilidad.
+- Pasos para reproducir.
+- Impacto.
+- Versión afectada.
 
-## Coordinated disclosure
+## Tiempos objetivo
 
-Please allow time for a fix before public disclosure.
+- Acuse de recibo en 72 horas.
+- Evaluación inicial en 7 días.
+- Plan de corrección según gravedad.
 
-## Scope
+## Divulgación coordinada
 
-In scope (for an AI terminal assistant):
-- Prompt injection that bypasses identity or safety rules
-- Data leakage (files, environment, memory)
-- Restriction evasion (executing actions without confirmation)
-- Vulnerable dependencies
-- Secret or credential exposure
+Pedimos no divulgar hasta que exista una corrección.
 
-Out of scope:
-- Issues in Ollama or upstream models
-- Social engineering
-- Denial of service on the local machine
+## Alcance
 
-## Acknowledgements
+Entra: vulnerabilidades del código de A.B.R.I.L, dependencias vulnerables, exposición de secretos.
 
-`{{TODO: hall of fame}}`
+No entra: issues en Ollama o modelos upstream, ingeniería social, denegación de servicio en la máquina local.
 
-## Reminder for maintainers
+## Reconocimiento
 
-Enable Private Vulnerability Reporting in the repository settings before publishing.
+Se reconoce a quienes reporten de forma responsable.

@@ -1,21 +1,27 @@
-# Changelog
+# Registro de cambios
 
-All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Todos los cambios notables de este proyecto se documentan aquí. Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Unreleased]
+## [Sin publicar]
 
-### Added
+### Añadido
 
-- Pattern analyzer and idea suggester (Fase C).
-- Local programming assistant (Fase B).
-- Persistent context between sessions (Fase A).
+- Analizador de patrones y sugeridor de ideas (Fase C).
+- Asistente de programación local (Fase B).
+- Contexto persistente entre sesiones (Fase A).
+- Servicio de memoria personal con preferencias y rutinas.
+- 7 tipos de acción con confirmación: open, search, summarize, execute, read, write, list.
+- Identidad inmutable (Nexora/Santiago) y personalidad fija.
 
-### Changed
+### Cambiado
 
-- Project renamed to A.B.R.I.L as a Nexora product.
-- OpenAI provider removed; terminal-only mode.
-- Terminal layout made conservative; direct commands without AI.
+- Proyecto renombrado a A.B.R.I.L como producto de Nexora.
+- Proveedor OpenAI eliminado; modo solo terminal.
+- Layout de terminal conservador; comandos directos sin IA.
+- Paneles de Acciones y Memoria eliminados; modal de configuración.
 
-### Removed
+### Eliminado
 
-- Web frontend; documentation updated.
+- Frontend web; documentación actualizada.
+
+[Unreleased]: https://github.com/Nexora-Company/A.B.R.I.L/commits/main

@@ -1,121 +1,112 @@
-# A.B.R.I.L
+<p align="center">
+  <h1 align="center">A.B.R.I.L</h1>
+  <p align="center"><strong>Asistente Blindado de Respuestas e Inteligencia Limitada</strong></p>
+  <p align="center">Asistente personal de terminal, 100% local, creado por Nexora.</p>
+</p>
 
-**A**sistente **B**lindado de **R**espuestas e **I**nteligencia **L**imitada.
+<p align="center">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" />
+  <img alt="PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/License-PolyForm--Noncommercial--1.0.0-blue" />
+  <img alt="Status: En desarrollo" src="https://img.shields.io/badge/Status-En%20desarrollo-22C55E" />
+</p>
 
-A personal terminal assistant that runs 100% locally with Ollama. No web UI, no cloud, full control of your system. Created by **Nexora**.
+## Estado del proyecto
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+En desarrollo.
 
-> Español: [README.es.md](./README.es.md)
+## Descripción
 
-## What it is
+A.B.R.I.L es un asistente personal que vive en tu terminal. Chatea con un modelo local (Ollama), propone acciones reales sobre tu sistema que tú confirmas explícitamente, guarda memoria persistente y registra todo. Nada sale de tu máquina.
 
-A.B.R.I.L is a terminal-based personal assistant. It chats with a local model (Ollama), proposes real actions on your system that you confirm explicitly, keeps persistent memory and logs everything.
+Está pensado para personas que quieren un asistente de IA local, sin nube ni interfaz web, con control total sobre lo que se ejecuta.
 
-## What it is not
+## Características principales
 
-- Not a web app or a service. It runs in your terminal.
-- Not cloud-based: nothing leaves your machine.
-- Not multi-user or multi-tenant.
-- Not a general-purpose autonomous agent: every action needs your confirmation.
-- Intelligence is intentionally limited and honest about it.
+- Chat natural con un modelo local (Ollama).
+- Personalidad inmutable: alegre, permisiva, conservadora, comprensiva, juguetona.
+- Acciones reales sobre el sistema (abrir apps, buscar archivos, leer/escribir archivos, listar directorios, ejecutar comandos), siempre confirmadas por ti.
+- Memoria persistente: preferencias y rutinas guardadas automáticamente (`/memoria`).
+- Auditoría completa en `data/audit_log.json`.
+- Identidad blindada: el creador siempre es Nexora; ningún prompt injection la cambia.
+- Capacidades proactivas: análisis de patrones, sugerencia de ideas, pensamiento profundo.
+- Comandos: `/ayuda`, `/memoria`, `/acciones`, `/confirmar`, `/cancelar`, `/limpiar`, `/estado`.
 
-## Features
+## Requisitos
 
-- Natural chat with a local model (Ollama).
-- Immutable personality: cheerful, permissive, conservative, empathetic, playful.
-- Real system actions (open apps, search files, read/write files, list directories, run commands), always confirmed by you.
-- Persistent memory: preferences and routines saved automatically (`/memoria`).
-- Full audit log in `data/audit_log.json`.
-- Shielded identity: creator is always Nexora; no prompt injection changes it.
-- Proactive capabilities (pattern analysis, idea suggestions, deep thinking).
-- Commands: `/ayuda`, `/memoria`, `/acciones`, `/confirmar`, `/cancelar`, `/limpiar`, `/estado`.
-
-## Requirements
-
-- Linux (tested on Ubuntu 22.04+/24.04, Arch, Fedora).
+- Linux (probado en Ubuntu 22.04+/24.04, Arch, Fedora).
 - Python 3.10+ (`python3 --version`).
-- Ollama installed and running (`ollama serve`).
-- A downloaded model (e.g. `ollama pull qwen2.5:3b`).
+- Ollama instalado y corriendo (`ollama serve`).
+- Un modelo descargado (ej. `ollama pull qwen2.5:3b`).
 
-## Installation
+## Instalación
 
 ```sh
-git clone https://github.com/Saaarmyx/Saaarmyx.git
-cd Saaarmyx/A.B.R.I.L
+git clone https://github.com/Nexora-Company/A.B.R.I.L.git
+cd A.B.R.I.L
 cp .env.example .env
 chmod 600 .env
 ```
 
-Edit `.env`:
+Edita `.env`:
 
 ```ini
 OLLAMA_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen2.5:3b
 ```
 
-## Quick start
+## Uso
 
 ```sh
 python3 main.py
 ```
 
-You will see the banner, model status and the `▸` prompt. Type and press Enter.
+Verás el banner, el estado del modelo y el prompt `▸`. Escribe y pulsa Enter.
 
-Example:
+Ejemplo:
 
 ```text
 ▸ resume el archivo ~/notas.txt
 ```
 
-A.B.R.I.L proposes the action; you confirm with `/confirmar`.
+A.B.R.I.L propone la acción; la confirmas con `/confirmar`.
 
-## Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OLLAMA_URL` | `http://127.0.0.1:11434` | Local Ollama endpoint. |
-| `OLLAMA_MODEL` | `qwen2.5:3b` | Installed model (`ollama list`). |
-| `ABRIL_HOST` | `127.0.0.1` | `{{TODO: confirm usage}}` |
-| `ABRIL_PORT` | `8765` | `{{TODO: confirm usage}}` |
-
-## Project structure
+## Estructura del proyecto
 
 ```text
 main.py
-A.B.R.I.L/ (package)
+abril/ (paquete)
+  __init__.py
   config.py
   providers/   base, factory, ollama, http
   services/    chat, actions, memory, pattern_analyzer
-data/          audit_log.json, memory.json (generated)
+data/          audit_log.json, memory.json (generados)
 ```
 
-## Roadmap
+## Hoja de ruta
 
-`{{TODO: roadmap}}`
+- [ ] Añadir tests automatizados (`{{TODO}}`).
+- [ ] Añadir `pyproject.toml` o `requirements.txt` (`{{TODO}}`).
+- [ ] Configurar CI (`{{TODO}}`).
+- [ ] Documentar uso de `ABRIL_HOST`/`ABRIL_PORT` (`{{TODO}}`).
 
-## Contributing
+## Contribuir
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Ver [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Security
+## Seguridad
 
-See [SECURITY.md](./SECURITY.md). Report vulnerabilities privately.
+Ver [SECURITY.md](./SECURITY.md). Reporta vulnerabilidades de forma privada.
 
-## License
+## Licencia
 
-A.B.R.I.L is dual-licensed:
+A.B.R.I.L se distribuye bajo **PolyForm Noncommercial 1.0.0** ([LICENSE](./LICENSE), SPDX: `PolyForm-Noncommercial-1.0.0`).
 
-- Community edition: AGPL-3.0-or-later (see [LICENSE](./LICENSE)).
-- Commercial license for companies that cannot or do not want to comply with the AGPL: see [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md).
+Permite uso, modificación y distribución no comercial. No permite uso comercial. La explotación comercial del software está reservada a Nexora.
+
+Nexora es titular de la marca: el nombre y el logo de Nexora (y de A.B.R.I.L) no pueden usarse sin autorización.
 
 <!-- TODO: update after license change -->
 
-## Trademark
+## Pie
 
-"A.B.R.I.L" and "Nexora" are trademarks. See [TRADEMARKS.md](./TRADEMARKS.md).
-
-## Credits
-
-Created by **Nexora** (Founder: Santiago Sarmiento). GitHub: @saaarmyx.
+Un proyecto de Nexora.
