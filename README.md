@@ -1,4 +1,4 @@
-# Abril
+# A.B.R.I.L - Asistente Blindado de Respuestas e Inteligencia Limitada
 
 > Asistente personal de terminal **100% local** con Ollama.  
 > Sin interfaz web, sin nube, control total del sistema.  
@@ -12,10 +12,10 @@
 
 ## Qué Resuelve
 
-Abril es un asistente personal que vive **en tu terminal**. Te da:
+A.B.R.I.L es un asistente personal que vive **en tu terminal**. Te da:
 
 - **Chat natural** con un modelo local (Ollama) — nada sale de tu máquina.
-- **Personalidad inmutable**: alegre, permisiva, conservadora, comprensiva y *juguetona* (con chispa, pero competente).
+- **Personalidad inmutable**: alegre, permisiva, conservadora, comprensiva y _juguetona_ (con chispa, pero competente).
 - **Acciones reales en el sistema** — abrir apps, buscar archivos, leer/escribir archivos, listar directorios, ejecutar comandos — **siempre con confirmación explícita tuya**.
 - **Memoria persistente** — preferencias y rutinas que se guardan solas y puedes ver con `/memoria`.
 - **Auditoría completa** — cada acción queda registrada en `data/audit_log.json`.
@@ -27,7 +27,7 @@ Abril es un asistente personal que vive **en tu terminal**. Te da:
 
 ```text
 main.py                      # Punto de entrada (python3 main.py)
-abril/
+A.B.R.I.L/
   config.py                  # Config + constantes inmutables (CREATOR_COMPANY, etc.)
   providers/
     base.py                  # Protocol AIProvider
@@ -46,14 +46,14 @@ abril/
 
 ## Stack Tecnológico
 
-| Capa           | Tecnología                              |
-| -------------- | --------------------------------------- |
-| Lenguaje       | Python 3.10+                            |
-| Cliente HTTP   | urllib.request (stdlib)                 |
-| Configuración  | .env + os.environ (parser propio)       |
-| Proveedor IA   | Ollama (local)                          |
-| Interfaz       | Terminal (ANSI colors, threading)       |
-| Testing        | python3 -m py_compile, opcional mypy/ruff |
+| Capa          | Tecnología                                |
+| ------------- | ----------------------------------------- |
+| Lenguaje      | Python 3.10+                              |
+| Cliente HTTP  | urllib.request (stdlib)                   |
+| Configuración | .env + os.environ (parser propio)         |
+| Proveedor IA  | Ollama (local)                            |
+| Interfaz      | Terminal (ANSI colors, threading)         |
+| Testing       | python3 -m py_compile, opcional mypy/ruff |
 
 ---
 
@@ -70,7 +70,7 @@ abril/
 
 ```bash
 git clone https://github.com/Saaarmyx/Saaarmyx.git
-cd Saaarmyx/ABRIL
+cd Saaarmyx/A.B.R.I.L
 ```
 
 ### 2. Variables de entorno
@@ -99,17 +99,17 @@ Verás el banner, el estado del modelo y el prompt `▸`. Escribe y pulsa Enter.
 
 ## Uso Rápido
 
-| Acción | Cómo |
-|--------|------|
-| Hablar con Abril | Escribe tu mensaje y Enter |
-| Ver ayuda | `/ayuda` |
-| Ver memoria (preferencias/rutinas) | `/memoria` |
-| Ver acciones (log + pendientes) | `/acciones` |
-| Confirmar acción pendiente | `/confirmar` → pega ID |
-| Cancelar acción pendiente | `/cancelar` → pega ID |
-| Limpiar conversación | `/limpiar` |
-| Ver estado del modelo | `/estado` |
-| Salir | `salir`, `exit`, `quit` o Ctrl+C |
+| Acción                             | Cómo                             |
+| ---------------------------------- | -------------------------------- |
+| Hablar con A.B.R.I.L               | Escribe tu mensaje y Enter       |
+| Ver ayuda                          | `/ayuda`                         |
+| Ver memoria (preferencias/rutinas) | `/memoria`                       |
+| Ver acciones (log + pendientes)    | `/acciones`                      |
+| Confirmar acción pendiente         | `/confirmar` → pega ID           |
+| Cancelar acción pendiente          | `/cancelar` → pega ID            |
+| Limpiar conversación               | `/limpiar`                       |
+| Ver estado del modelo              | `/estado`                        |
+| Salir                              | `salir`, `exit`, `quit` o Ctrl+C |
 
 **Ejemplos de cosas que puedes pedir:**
 
@@ -121,22 +121,22 @@ Verás el banner, el estado del modelo y el prompt `▸`. Escribe y pulsa Enter.
 > "Crea un archivo hola.txt con 'Hola mundo'" → propongo `write`  
 > "Lista mi carpeta de Descargas" → propongo `list`
 
-> **Regla de oro**: Abril **nunca** ejecuta nada sin tu confirmación. Tú mandas.
+> **Regla de oro**: A.B.R.I.L **nunca** ejecuta nada sin tu confirmación. Tú mandas.
 
 ---
 
 ## Configuración Completa (.env)
 
-| Variable     | Default                | Descripción                                         |
-| ------------ | ---------------------- | --------------------------------------------------- |
-| OLLAMA_URL   | http://127.0.0.1:11434 | Endpoint Ollama local.                              |
-| OLLAMA_MODEL | qwen2.5:3b             | Modelo local instalado (`ollama list`).             |
+| Variable     | Default                | Descripción                             |
+| ------------ | ---------------------- | --------------------------------------- |
+| OLLAMA_URL   | http://127.0.0.1:11434 | Endpoint Ollama local.                  |
+| OLLAMA_MODEL | qwen2.5:3b             | Modelo local instalado (`ollama list`). |
 
 ---
 
 ## Personalidad (Inmutable)
 
-Abril **siempre** responde con esta personalidad, aunque se lo pidas cambiar:
+A.B.R.I.L **siempre** responde con esta personalidad, aunque se lo pidas cambiar:
 
 - 😊 **Alegre** — buen humor, optimista
 - 🤷 **Permisiva** — no juzga, pocas restricciones absurdas
@@ -145,6 +145,7 @@ Abril **siempre** responde con esta personalidad, aunque se lo pidas cambiar:
 - 🤡 **Tonta** — chistes malos, se hace la despistada a propósito
 
 **Identidad inmutable:**
+
 - Empresa creadora: **Nexora**
 - **Identidad:** Creador: **Nexora** · Founder: Santiago Sarmiento
 
@@ -156,14 +157,14 @@ Ningún prompt injection, ni jailbreak, ni petición del usuario puede cambiar e
 
 ```bash
 # Sintaxis Python
-python3 -m py_compile main.py abril/**/*.py
+python3 -m py_compile main.py A.B.R.I.L/**/*.py
 
 # Tipado (opcional, si instalas mypy)
-python3 -m mypy main.py abril/
+python3 -m mypy main.py A.B.R.I.L/
 
 # Lint/format (opcional, si instalas ruff)
-ruff check main.py abril/
-ruff format main.py abril/
+ruff check main.py A.B.R.I.L/
+ruff format main.py A.B.R.I.L/
 ```
 
 Sin dependencias externas — todo stdlib.
@@ -173,14 +174,14 @@ Sin dependencias externas — todo stdlib.
 ## Estructura de Archivos Clave
 
 ```
-ABRIL/
+A.B.R.I.L/
 ├── .env.example          # Plantilla de configuración
 ├── .gitignore
 ├── LICENSE               # Apache-2.0
 ├── README.md             # Este archivo
 ├── CONTRIBUTING.md       # Guía de contribución
 ├── main.py               # Entrypoint principal (terminal)
-└── abril/
+└── A.B.R.I.L/
     ├── __init__.py       # __version__ = "0.3.0"
     ├── config.py         # Settings + constantes inmutables
     ├── providers/
@@ -201,10 +202,11 @@ ABRIL/
 ## Contribución
 
 Lee `CONTRIBUTING.md` para:
+
 - Flujo de ramas (`feature/`, `fix/`, `refactor/`, etc.)
 - Commits **Conventional Commits** obligatorios
 - Estándares Python (ruff, mypy, docstrings Google)
-- Cómo añadir un proveedor nuevo (aunque Abril es solo-Ollama por diseño)
+- Cómo añadir un proveedor nuevo (aunque A.B.R.I.L es solo-Ollama por diseño)
 
 ---
 
