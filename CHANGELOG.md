@@ -20,6 +20,7 @@ Todos los cambios notables de este proyecto se documentan aquí. Formato basado 
 
 ### Cambiado
 
+- Rediseño de la terminal: banner centrado, compositor con acento morado, bloques de conversación, cabecera de sesión y métricas de latencia.
 - `main.py` construye los servicios mediante `abril.app.bootstrap`.
 - `Settings` lee `ABRIL_HOST` y `ABRIL_PORT` (reservados para modos futuros).
 - Analizador de patrones y sugeridor de ideas (Fase C).

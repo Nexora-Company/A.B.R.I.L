@@ -23,6 +23,7 @@ Está pensado para personas que quieren un asistente de IA local, sin nube ni in
 ## Características principales
 
 - Chat natural con un modelo local (Ollama).
+- Interfaz de terminal con banner, compositor con acento morado y métricas de respuesta.
 - Personalidad inmutable: alegre, permisiva, conservadora, comprensiva, juguetona.
 - Acciones reales sobre el sistema (abrir apps, buscar archivos, leer/escribir archivos, listar directorios, ejecutar comandos), siempre confirmadas por ti.
 - Memoria persistente: preferencias y rutinas guardadas automáticamente (`/memoria`).
