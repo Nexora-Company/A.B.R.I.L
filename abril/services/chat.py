@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from ..config import Settings, CREATOR_COMPANY, ASSISTANT_NAME
 from ..providers.base import AIProvider
+from .personality import PersonalityTemplate, build_system_prompt, suggest_template
+from .policy import ActionKind, PermissionPolicy, PolicyDecision
+from .router import route
+from .untrusted import TrustLevel, process_content, tag_untrusted_in_prompt
 
 
 SYSTEM_PROMPT = (
@@ -42,9 +46,23 @@ class InvalidConversation(ValueError):
 
 
 class ChatService:
-    def __init__(self, provider: AIProvider, settings: Settings) -> None:
+    def __init__(
+        self,
+        provider: AIProvider,
+        settings: Settings,
+        *,
+        policy: PermissionPolicy | None = None,
+        personality_template: PersonalityTemplate = PersonalityTemplate.DEFAULT,
+        routing_enabled: bool = False,
+        local_strict: bool = True,
+    ) -> None:
         self.provider = provider
         self.settings = settings
+        self.policy = policy or PermissionPolicy()
+        self.personality_template = personality_template
+        self.routing_enabled = routing_enabled
+        self.local_strict = local_strict
+        self._system_prompt = build_system_prompt(SYSTEM_PROMPT, personality_template)
 
     def status(self) -> dict:
         provider_status = self.provider.status()
@@ -53,8 +71,36 @@ class ChatService:
             "provider": self.provider.name,
             "model": self.provider.model,
             "creator_company": CREATOR_COMPANY,
+            "personality_template": self.personality_template.value,
+            "routing_enabled": self.routing_enabled,
+            "local_strict": self.local_strict,
             **provider_status,
         }
+
+    def set_personality_template(self, template: PersonalityTemplate) -> None:
+        self.personality_template = template
+        self._system_prompt = build_system_prompt(SYSTEM_PROMPT, template)
+
+    def suggest_template(self, text: str) -> PersonalityTemplate:
+        return suggest_template(text)
+
+    def route_decision(self, text: str, light_model: str, heavy_model: str):
+        return route(text, routing_enabled=self.routing_enabled, light_model=light_model, heavy_model=heavy_model)
+
+    def check_policy(self, action: ActionKind, **kwargs) -> "PolicyDecision":
+        return self.policy.evaluate(action, **kwargs)
+
+    def process_user_input(self, text: str, trust: TrustLevel = TrustLevel.TRUSTED) -> tuple[str, list[str]]:
+        """Sanea y etiqueta la entrada según su nivel de confianza.
+
+        Lo escrito por el usuario en la terminal se considera confiable y se
+        devuelve intacto. El contenido externo se escapa, se marca y se
+        reportan los riesgos detectados antes de enviarlo al modelo.
+        """
+        if trust == TrustLevel.TRUSTED:
+            return text, []
+        processed = process_content(text, trust=trust, source="user")
+        return tag_untrusted_in_prompt(processed), processed.risks
 
     def reply(self, messages: object) -> str:
         if not isinstance(messages, list) or not messages:
@@ -67,4 +113,4 @@ class ChatService:
             if role not in {"user", "assistant"} or not isinstance(content, str):
                 raise InvalidConversation("Formato de conversación inválido.")
             normalized.append({"role": role, "content": content[: self.settings.max_message_chars]})
-        return self.provider.complete([{"role": "system", "content": SYSTEM_PROMPT}, *normalized])
+        return self.provider.complete([{"role": "system", "content": self._system_prompt}, *normalized])

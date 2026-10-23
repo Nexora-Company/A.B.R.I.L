@@ -27,6 +27,10 @@ class FeatureFlags:
     predictive: bool = False
     sqlite_memory: bool = False
 
+    # Protocolos de seguridad (Fase 1+)
+    nexo_brace: bool = False
+    nexus_lock: bool = False
+
     # Fase 2: multitarea y nube
     background_tasks: bool = False
     multi_model: bool = False
